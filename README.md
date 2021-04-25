@@ -1,0 +1,2 @@
+# githubnotifications
+Better GitHub notifications
