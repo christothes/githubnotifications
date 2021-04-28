@@ -6,7 +6,6 @@ using System.Text.Json.Serialization;
 
 namespace GitHubNotifications.Server
 {
-
     public class PRComment : ITableEntity
     {
         public string PartitionKey { get; set; }

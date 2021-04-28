@@ -10,6 +10,32 @@
 
 <button class="btn btn-primary" @onclick="RequestPermission">Get Permission</button>
 
+<ul id="commentList">
+    @foreach (var comment in comments)
+    {
+
+        @if (comment.ReplyToBody != null)
+        {
+            <li>
+                <span></span>
+                <div><span>@comment.Title<br /><strong>@at@comment.ReplyToUser</strong>: @comment.ReplyToBody</span></div>
+                <ul>
+                    <li>
+                        <div><span><strong>@at@comment.User</strong>@comment.Body</span></div>
+                    </li>
+                </ul>
+            </li>
+        }
+        else
+        {
+            <li>
+                <div><span>@comment.Title<br /><strong>@at@comment.User</strong>@comment.Body</span></div>
+            </li>
+        }
+    }
+</ul>
+
+
 <ul id="messagesList">
     @foreach (var message in messages)
     {
@@ -23,6 +49,7 @@
     private string icon = "images/github.png";
     private int id = 1;
     private object notif;
+    private string at = "@";
 
     private async Task RequestPermission()
     {
@@ -36,7 +63,7 @@
         }
     }
 
-    private async Task CreateNotifcationAsync(DateTime updated, string id,string title, string body, string url)
+    private async Task CreateNotifcationAsync(DateTime updated, string id, string title, string body, string url)
     {
         var options = new
         {
@@ -46,7 +73,8 @@
             RequireInteraction = false,
             Tag = id,
             TimeStamp = updated,
-            Uri = url        };
+            Uri = url
+        };
         try
         {
             await Send();
@@ -60,16 +88,17 @@
 
     private HubConnection hubConnection;
     private List<string> messages = new List<string>();
+    private List<Comment> comments = new List<Comment>();
     private string userInput = "my input";
     private string messageInput = "test input";
 
     protected override async Task OnInitializedAsync()
     {
         hubConnection = new HubConnectionBuilder()
-            .WithUrl(NavigationManager.ToAbsoluteUri("/notificationshub"))
-            .Build();
+        .WithUrl(NavigationManager.ToAbsoluteUri("/notificationshub"))
+        .Build();
 
-        hubConnection.On<DateTime, string, string, string, string>("ReceiveMessage", (updated, id, title, message, url) =>
+        hubConnection.On<DateTime, string, string, string, string>("CheckStatus", (updated, id, title, message, url) =>
         {
             var encodedMsg = $"{title}: {message}";
             messages.Add(encodedMsg);
@@ -77,18 +106,27 @@
             CreateNotifcationAsync(updated, id, title, message, url).GetAwaiter().GetResult();
         });
 
+        hubConnection.On<DateTime, string, string, string, string, string, string, string>("Comment", (updated, id, user, title, body, url, replytouser, replytobody) =>
+        {
+            Comment comment = new Comment(id, user, url, updated, title, body, replytouser, replytobody);
+            comments.Add(comment);
+            StateHasChanged();
+            CreateNotifcationAsync(updated, id, title, $"@{user}: {body}", url).GetAwaiter().GetResult();
+        });
+
+
         await hubConnection.StartAsync();
     }
 
     async Task Send() =>
-        await hubConnection.SendAsync("SendMessage", userInput, messageInput);
+    await hubConnection.SendAsync("SendMessage", userInput, messageInput);
 
     public bool IsConnected =>
-        hubConnection.State == HubConnectionState.Connected;
+    hubConnection.State == HubConnectionState.Connected;
 
     public async ValueTask DisposeAsync()
     {
         await hubConnection.DisposeAsync();
     }
-}
+    }
 

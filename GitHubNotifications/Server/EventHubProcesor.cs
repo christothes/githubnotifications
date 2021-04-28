@@ -25,6 +25,7 @@ namespace GitHubNotifications.Server.Controllers
         private readonly EventHubConsumerClient consumer;
         private readonly TableServiceClient tableService;
         private TableClient prTable;
+        StringBuilder sbComment = new StringBuilder();
 
         public EventHubProcessor(
             ILogger<EventHubProcessor> logger,
@@ -129,7 +130,9 @@ namespace GitHubNotifications.Server.Controllers
                                 }
                                 catch { }
                             }
-                            await prTable.UpsertEntityAsync<PREntity>(new PREntity { PartitionKey = PR_PK, RowKey = pr.PullRequest.Head.Sha, Title = pr.PullRequest.Title, Url = pr.PullRequest.HtmlUrl });
+                            await prTable.UpsertEntityAsync<PREntity>(
+                                new PREntity { PartitionKey = PR_PK, RowKey = pr.PullRequest.Head.Sha, Title = pr.PullRequest.Title, Url = pr.PullRequest.HtmlUrl },
+                                TableUpdateMode.Replace);
                         }
                         if (webhookObj is CheckSuiteEvent ch)
                         {
@@ -137,12 +140,18 @@ namespace GitHubNotifications.Server.Controllers
                         }
                         if (webhookObj is PullRequestReviewEvent r)
                         {
-                            await prTable.UpsertEntityAsync<PREntity>(new PREntity { PartitionKey = PR_PK, RowKey = r.PullRequest.Head.Sha, Title = r.PullRequest.Title, Url = r.PullRequest.HtmlUrl });
-                            var commentTable = tableService.GetTableClient(GetPRCommentTableName(r.PullRequest));
-                            await commentTable.CreateIfNotExistsAsync();
-                            await commentTable.UpsertEntityAsync<PRComment>(new PRComment(r.Comment));
+                            await prTable.UpsertEntityAsync<PREntity>(
+                                new PREntity { PartitionKey = PR_PK, RowKey = r.PullRequest.Head.Sha, Title = r.PullRequest.Title, Url = r.PullRequest.HtmlUrl },
+                                TableUpdateMode.Replace);
 
-                            //await SendPrCommentMail(r, commentTable);
+                            var tableName = GetPRCommentTableName(r.PullRequest);
+                            var commentTable = tableService.GetTableClient(tableName);
+                            if ((await tableService.GetTablesAsync(t => t.Name == tableName).ToEnumerableAsync()).Count == 0)
+                            {
+                                await commentTable.CreateIfNotExistsAsync();
+                            }
+                            await commentTable.UpsertEntityAsync<PRComment>(new PRComment(r.Comment), TableUpdateMode.Replace);
+                            await SendPrCommentMail(r, commentTable);
                         }
                         //webhookObj.Dump();
                     }
@@ -154,14 +163,15 @@ namespace GitHubNotifications.Server.Controllers
             }
         }
 
-        public static async Task SendPrCommentMail(PullRequestReviewEvent pr, TableClient table)
+        public async Task SendPrCommentMail(PullRequestReviewEvent pr, TableClient table)
         {
             sbComment.Clear();
+            PRComment inReplyTo = null;
             if (pr.Comment.InReplyToId > 0)
             {
                 try
                 {
-                    PRComment inReplyTo = await table.GetEntityAsync<PRComment>("comment", pr.Comment.InReplyToId.ToString());
+                    inReplyTo = await table.GetEntityAsync<PRComment>("comment", pr.Comment.InReplyToId.ToString());
                     sbComment.AppendLine($"> @{inReplyTo.Author}: {inReplyTo.Body}");
                     sbComment.AppendLine();
                 }
@@ -171,19 +181,30 @@ namespace GitHubNotifications.Server.Controllers
                 }
             }
 
-            sbComment.AppendLine($"@{pr.Comment.User.Login}: {pr.Comment.Body}");
+            sbComment.AppendLine($"{pr.Comment.User.Login}: {pr.Comment.Body}");
             var body = sbComment.ToString();
-            var from = new EmailAddress("gh-notif@microsoft.com", "GitHub Notifications");
+            //var from = new EmailAddress("gh-notif@microsoft.com", "GitHub Notifications");
             var subject = $"Comment ({pr.Comment.User.Login}) : {pr.PullRequest.Title}";
-            var to = new EmailAddress("chriss@microsoft.com", "christothes");
+            //var to = new EmailAddress("chriss@microsoft.com", "christothes");
             var plainTextContent = body;
             var htmlContent = body;
-            var msg = MailHelper.CreateSingleEmail(from, to, subject, plainTextContent, htmlContent);
+            //var msg = MailHelper.CreateSingleEmail(from, to, subject, plainTextContent, htmlContent);
 
-            Console.WriteLine(pr.Comment.CreatedAt.ToLocalTime().ToString());
-            Console.WriteLine(subject);
-            Console.WriteLine("--------------------------------------");
-            Console.WriteLine(body);
+            _logger.LogInformation(pr.Comment.CreatedAt.ToLocalTime().ToString());
+            _logger.LogInformation(subject);
+            _logger.LogInformation(body);
+
+            await _hubContext.Clients.All.SendAsync(
+                "Comment",
+                pr.Comment.UpdatedAt.ToLocalTime(),
+                pr.Comment.Id.ToString(),
+                pr.Comment.User.Login,
+                pr.PullRequest.Title,
+                pr.Comment.Body,
+                pr.Comment.HtmlUrl,
+                inReplyTo?.Author,
+                inReplyTo?.Body);
+
         }
 
         public async Task SendCheckStatusMail(CheckSuiteEvent webhookEvent)
@@ -211,12 +232,12 @@ namespace GitHubNotifications.Server.Controllers
             _logger.LogInformation(plainTextContent);
 
             await _hubContext.Clients.All.SendAsync(
-                "ReceiveMessage",
+                "CheckStatus",
                 webhookEvent.CheckSuite.UpdatedAt.ToLocalTime(),
                 webhookEvent.CheckSuite.Id.ToString(),
                 subject,
                 plainTextContent,
-                prDetails.Url,                  );
+                prDetails.Url);
 
             //var response = await client.SendEmailAsync(msg);
         }
@@ -224,6 +245,19 @@ namespace GitHubNotifications.Server.Controllers
         public static string GetPRCommentTableName(PullRequest pr)
         {
             return "prc" + pr.Id.ToString();
+        }
+    }
+
+    public static class TestAsyncEnumerableExtensions
+    {
+        public static async Task<List<T>> ToEnumerableAsync<T>(this IAsyncEnumerable<T> asyncEnumerable)
+        {
+            List<T> list = new List<T>();
+            await foreach (T item in asyncEnumerable)
+            {
+                list.Add(item);
+            }
+            return list;
         }
     }
 }
