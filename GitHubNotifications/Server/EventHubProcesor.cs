@@ -13,6 +13,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Azure.Messaging.EventHubs.Processor;
 
 namespace GitHubNotifications.Server.Controllers
 {
@@ -40,17 +41,13 @@ namespace GitHubNotifications.Server.Controllers
             prTable = tableService.GetTableClient("prs");
             processor.ProcessErrorAsync += async (args) =>
             {
-                Console.WriteLine(args.Exception);
+                _logger.LogError(args.Exception.ToString());
                 await Task.Yield();
             };
 
             processor.ProcessEventAsync += async (args) =>
             {
-                if (args.HasEvent)
-                {
-                    await ProcessEvent(args.Data);
-                    await args.UpdateCheckpointAsync();
-                }
+                await DoWork(args);
             };
         }
 
@@ -61,33 +58,15 @@ namespace GitHubNotifications.Server.Controllers
             await _processor.StartProcessingAsync(stoppingToken);
         }
 
-        private Task DoWork(object state)
+        private async Task DoWork(object state)
         {
-            /*
-            var t = Task.Run(async () =>
-             {
-                 while (executionCount < 10)
-                 {
-                     await _hubContext.Clients.All.SendAsync("ReceiveMessage", "test", executionCount.ToString());
-                     await Task.Delay(5000);
-                     executionCount++;
-                 }
-             });
+            ProcessEventArgs args = (ProcessEventArgs)state;
 
-            using var cancellationSource = new CancellationTokenSource();
-            cancellationSource.CancelAfter(TimeSpan.FromSeconds(45));
-            var opts = new ReadEventOptions();
-            opts.MaximumWaitTime = TimeSpan.FromSeconds(30);
-            var t = Task.Run(
-                async () =>
-                {
-                    await foreach (PartitionEvent receivedEvent in _processor.ReadEventsAsync(opts))
-                    {
-                        await ProcessEvent(receivedEvent.Data);
-                    }
-                });
-            */
-            return Task.CompletedTask;
+            if (args.HasEvent)
+            {
+                await ProcessEvent(args.Data);
+                await args.UpdateCheckpointAsync();
+            }
         }
 
         public Task StopAsync(CancellationToken stoppingToken)
