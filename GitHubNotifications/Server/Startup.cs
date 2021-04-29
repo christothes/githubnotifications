@@ -14,6 +14,7 @@ using GitHubNotifications.Server.Controllers;
 using Azure.Messaging.EventHubs.Consumer;
 using Azure.Identity;
 using Azure.Core;
+using Azure.Messaging.EventHubs;
 
 namespace GitHubNotifications.Server
 {
@@ -38,7 +39,6 @@ namespace GitHubNotifications.Server
             {
                 builder.AddBlobServiceClient(Configuration["ConnectionStrings:storageconnection:blob"], preferMsi: true);
                 builder.AddTableServiceClient(Configuration["ConnectionStrings:storageconnection"]);
-                // builder.AddEventHubConsumerClientWithNamespace("$default", "githubwebhooks.servicebus.windows.net", "githubwebhooks");
             });
             services.AddResponseCompression(opts =>
             {
@@ -52,8 +52,15 @@ namespace GitHubNotifications.Server
                 new ManagedIdentityCredential(),
                 new AzureCliCredential()
             });
-            services.AddSingleton(new EventHubConsumerClient("$default", "githubwebhooks.servicebus.windows.net", "githubwebhooks", cred));
-
+            // services.AddSingleton(new EventHubConsumerClient("$default", "githubwebhooks.servicebus.windows.net", "githubwebhooks", cred));
+            string containerUri = Configuration["ConnectionStrings:storageconnection:blob"] + "checkpoint";
+            services.AddSingleton(
+                new EventProcessorClient(
+                    new BlobContainerClient(new Uri(containerUri), cred),
+                    Configuration["ConnectionStrings:storageconnection:eventhub:cg"],
+                    Configuration["ConnectionStrings:storageconnection:eventhub:ns"],
+                    Configuration["ConnectionStrings:storageconnection:eventhub:name"],
+                    cred));
 
         }
 

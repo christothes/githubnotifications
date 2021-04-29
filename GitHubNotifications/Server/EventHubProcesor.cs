@@ -22,32 +22,46 @@ namespace GitHubNotifications.Server.Controllers
         public const string PR_PK = "pr";
         private readonly ILogger<EventHubProcessor> _logger;
         private readonly IHubContext<NotificationsHub> _hubContext;
-        private readonly EventHubConsumerClient consumer;
+        private readonly EventProcessorClient _processor;
         private readonly TableServiceClient tableService;
         private TableClient prTable;
-        StringBuilder sbComment = new StringBuilder();
+        StringBuilder sbComment = new();
 
         public EventHubProcessor(
             ILogger<EventHubProcessor> logger,
             IHubContext<NotificationsHub> hub,
-            EventHubConsumerClient consumer,
+            EventProcessorClient processor,
             TableServiceClient tableService)
         {
             _logger = logger;
             _hubContext = hub;
-            this.consumer = consumer;
+            _processor = processor;
             this.tableService = tableService;
             prTable = tableService.GetTableClient("prs");
+            processor.ProcessErrorAsync += async (args) =>
+            {
+                Console.WriteLine(args.Exception);
+                await Task.Yield();
+            };
+
+            processor.ProcessEventAsync += async (args) =>
+            {
+                if (args.HasEvent)
+                {
+                    await ProcessEvent(args.Data);
+                    await args.UpdateCheckpointAsync();
+                }
+            };
         }
 
         public async Task StartAsync(CancellationToken stoppingToken)
         {
-            _logger.LogInformation("Timed Hosted Service running.");
+            _logger.LogInformation($"{nameof(EventHubProcessor)} Hosted Service running.");
             await prTable.CreateIfNotExistsAsync();
-            await DoWork(default);
+            await _processor.StartProcessingAsync(stoppingToken);
         }
 
-        private async Task DoWork(object state)
+        private Task DoWork(object state)
         {
             /*
             var t = Task.Run(async () =>
@@ -59,31 +73,31 @@ namespace GitHubNotifications.Server.Controllers
                      executionCount++;
                  }
              });
-            */
 
             using var cancellationSource = new CancellationTokenSource();
             cancellationSource.CancelAfter(TimeSpan.FromSeconds(45));
             var opts = new ReadEventOptions();
             opts.MaximumWaitTime = TimeSpan.FromSeconds(30);
-            var t = Task.Run(async () =>
-            {
-                await foreach (PartitionEvent receivedEvent in consumer.ReadEventsAsync(opts))
+            var t = Task.Run(
+                async () =>
                 {
-                    await ProcessEvent(receivedEvent.Data);
-                }
-            });
+                    await foreach (PartitionEvent receivedEvent in _processor.ReadEventsAsync(opts))
+                    {
+                        await ProcessEvent(receivedEvent.Data);
+                    }
+                });
+            */
+            return Task.CompletedTask;
         }
 
         public Task StopAsync(CancellationToken stoppingToken)
         {
-            _logger.LogInformation("Timed Hosted Service is stopping.");
+            _logger.LogInformation($"{nameof(EventHubProcessor)} Hosted Service is stopping.");
 
             return Task.CompletedTask;
         }
 
-        public void Dispose()
-        {
-        }
+        public void Dispose() { }
 
         public async Task ProcessEvent(EventData data)
         {
@@ -123,12 +137,14 @@ namespace GitHubNotifications.Server.Controllers
                                 {
                                     prTable.DeleteEntity(PR_PK, pr.PullRequest.Head.Sha);
                                 }
-                                catch { }
+                                catch
+                                { }
                                 try
                                 {
                                     tableService.DeleteTable(GetPRCommentTableName(pr.PullRequest));
                                 }
-                                catch { }
+                                catch
+                                { }
                             }
                             await prTable.UpsertEntityAsync<PREntity>(
                                 new PREntity { PartitionKey = PR_PK, RowKey = pr.PullRequest.Head.Sha, Title = pr.PullRequest.Title, Url = pr.PullRequest.HtmlUrl },
@@ -159,6 +175,7 @@ namespace GitHubNotifications.Server.Controllers
                 catch (Exception ex)
                 {
                     _logger.LogError(ex.Message);
+                    _logger.LogError(ex.StackTrace);
                 }
             }
         }
@@ -204,7 +221,6 @@ namespace GitHubNotifications.Server.Controllers
                 pr.Comment.HtmlUrl,
                 inReplyTo?.Author,
                 inReplyTo?.Body);
-
         }
 
         public async Task SendCheckStatusMail(CheckSuiteEvent webhookEvent)
@@ -224,7 +240,7 @@ namespace GitHubNotifications.Server.Controllers
                 Console.WriteLine("*** Could not find PR in cache ***");
                 return;
             }
-            var subject = $"Checks {webhookEvent.CheckSuite.Conclusion} for PR: { prDetails.Title}";
+            var subject = $"Checks {webhookEvent.CheckSuite.Conclusion} for PR: {prDetails.Title}";
             var plainTextContent = $"PR: {prDetails.Url}";
             var htmlContent = $"<strong>PR: </strong> <a href=\"{prDetails.Url}\">{prDetails.Title}</a>";
 
@@ -242,10 +258,7 @@ namespace GitHubNotifications.Server.Controllers
             //var response = await client.SendEmailAsync(msg);
         }
 
-        public static string GetPRCommentTableName(PullRequest pr)
-        {
-            return "prc" + pr.Id.ToString();
-        }
+        public static string GetPRCommentTableName(PullRequest pr) { return "prc" + pr.Id.ToString(); }
     }
 
     public static class TestAsyncEnumerableExtensions

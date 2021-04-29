@@ -9,19 +9,28 @@
 <p>@response</p>
 
 <button class="btn btn-primary" @onclick="RequestPermission">Get Permission</button>
+<button class="btn btn-primary" @onclick="ClearComments">Clear Comments</button>
+<button class="btn btn-primary" @onclick="ClearChecks">Clear Checks</button>
 
 <ul id="commentList">
-    @foreach (var comment in comments)
+    @foreach (var comment in comments.OrderByDescending(c => c.Created))
     {
-
         @if (comment.ReplyToBody != null)
         {
             <li>
                 <span></span>
-                <div><span>@comment.Title<br /><strong>@at@comment.ReplyToUser</strong>: @comment.ReplyToBody</span></div>
+                <div>
+                    <span>
+                        @comment.Created.ToShortDateString() @comment.Created.ToShortTimeString() - @comment.Title<br/><strong>@at@comment.ReplyToUser</strong>: @comment.ReplyToBody
+                    </span>
+                </div>
                 <ul>
                     <li>
-                        <div><span><strong>@at@comment.User</strong>@comment.Body</span></div>
+                        <div>
+                            <span>
+                                <strong>@at@comment.User</strong>@comment.Body
+                            </span>
+                        </div>
                     </li>
                 </ul>
             </li>
@@ -29,7 +38,11 @@
         else
         {
             <li>
-                <div><span>@comment.Title<br /><strong>@at@comment.User</strong>@comment.Body</span></div>
+                <div>
+                    <span>
+                        @comment.Created.ToShortDateString() @comment.Created.ToShortTimeString() - @comment.Title<br/><strong>@at@comment.User</strong>@comment.Body
+                    </span>
+                </div>
             </li>
         }
     }
@@ -37,7 +50,7 @@
 
 
 <ul id="messagesList">
-    @foreach (var message in messages)
+    @foreach (var message in checks)
     {
         <li>@message</li>
     }
@@ -58,9 +71,19 @@
             permission = await JS.InvokeAsync<object>("requestPermission");
         }
         catch (Exception ex)
-        {
+        { }
+    }
 
-        }
+    private void ClearComments()
+    {
+        checks.Clear();
+        StateHasChanged();
+    }
+
+    private void ClearChecks()
+    {
+        comments.Clear();
+        StateHasChanged();
     }
 
     private async Task CreateNotifcationAsync(DateTime updated, string id, string title, string body, string url)
@@ -81,13 +104,11 @@
             notif = await JS.InvokeAsync<object>("createNotification", title, options);
         }
         catch (Exception ex)
-        {
-
-        }
+        { }
     }
 
     private HubConnection hubConnection;
-    private List<string> messages = new List<string>();
+    private List<string> checks = new List<string>(30);
     private List<Comment> comments = new List<Comment>();
     private string userInput = "my input";
     private string messageInput = "test input";
@@ -95,20 +116,24 @@
     protected override async Task OnInitializedAsync()
     {
         hubConnection = new HubConnectionBuilder()
-        .WithUrl(NavigationManager.ToAbsoluteUri("/notificationshub"))
-        .Build();
+            .WithUrl(NavigationManager.ToAbsoluteUri("/notificationshub"))
+            .Build();
 
         hubConnection.On<DateTime, string, string, string, string>("CheckStatus", (updated, id, title, message, url) =>
         {
             var encodedMsg = $"{title}: {message}";
-            messages.Add(encodedMsg);
+            checks.Add(encodedMsg);
             StateHasChanged();
             CreateNotifcationAsync(updated, id, title, message, url).GetAwaiter().GetResult();
         });
 
         hubConnection.On<DateTime, string, string, string, string, string, string, string>("Comment", (updated, id, user, title, body, url, replytouser, replytobody) =>
         {
-            Comment comment = new Comment(id, user, url, updated, title, body, replytouser, replytobody);
+            Comment comment = new Comment(id, user, url, updated.ToLocalTime(), title, body, replytouser, replytobody);
+            if (comments.Count == 30)
+            {
+                comments.RemoveAt(0);
+            }
             comments.Add(comment);
             StateHasChanged();
             CreateNotifcationAsync(updated, id, title, $"@{user}: {body}", url).GetAwaiter().GetResult();
@@ -119,14 +144,10 @@
     }
 
     async Task Send() =>
-    await hubConnection.SendAsync("SendMessage", userInput, messageInput);
+        await hubConnection.SendAsync("SendMessage", userInput, messageInput);
 
     public bool IsConnected =>
-    hubConnection.State == HubConnectionState.Connected;
+        hubConnection.State == HubConnectionState.Connected;
 
-    public async ValueTask DisposeAsync()
-    {
-        await hubConnection.DisposeAsync();
-    }
-    }
-
+    public async ValueTask DisposeAsync() { await hubConnection.DisposeAsync(); }
+}

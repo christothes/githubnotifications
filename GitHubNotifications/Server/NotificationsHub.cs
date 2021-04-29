@@ -11,7 +11,6 @@ namespace GitHubNotifications.Server.Controllers
 {
     public class NotificationsHub : Hub
     {
-        private int executionCount = 0;
         private readonly ILogger<NotificationsHub> _logger;
 
         public NotificationsHub(ILogger<NotificationsHub> logger)
