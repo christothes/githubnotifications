@@ -83,6 +83,7 @@ namespace GitHubNotifications.Server.Controllers
             string eventType = null;
             var eventBody = data.EventBody.ToString();
             var o = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(eventBody);
+            string decoded = string.Empty;
             foreach (var element in o)
             {
                 try
@@ -94,7 +95,7 @@ namespace GitHubNotifications.Server.Controllers
                     }
                     if (element.Key == "content")
                     {
-                        var decoded = Encoding.UTF8.GetString(Convert.FromBase64String(element.Value.GetString()));
+                        decoded = Encoding.UTF8.GetString(Convert.FromBase64String(element.Value.GetString()));
                         Type webhookType = eventType switch
                         {
                             "check_suite" => typeof(CheckSuiteEvent),
@@ -155,6 +156,7 @@ namespace GitHubNotifications.Server.Controllers
                 {
                     _logger.LogError(ex.Message);
                     _logger.LogError(ex.StackTrace);
+                    _logger.LogError(decoded);
                 }
             }
         }

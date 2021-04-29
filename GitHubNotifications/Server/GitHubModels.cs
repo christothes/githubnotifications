@@ -1083,10 +1083,10 @@ namespace GitHubNotifications.Server
         public string Path { get; set; }
 
         [JsonPropertyName("position")]
-        public int Position { get; set; }
+        public int? Position { get; set; }
 
         [JsonPropertyName("original_position")]
-        public int OriginalPosition { get; set; }
+        public int? OriginalPosition { get; set; }
 
         [JsonPropertyName("commit_id")]
         public string CommitId { get; set; }
@@ -1128,10 +1128,10 @@ namespace GitHubNotifications.Server
         public object StartSide { get; set; }
 
         [JsonPropertyName("line")]
-        public int Line { get; set; }
+        public int? Line { get; set; }
 
         [JsonPropertyName("original_line")]
-        public int OriginalLine { get; set; }
+        public int? OriginalLine { get; set; }
 
         [JsonPropertyName("side")]
         public string Side { get; set; }
