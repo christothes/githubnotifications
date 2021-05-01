@@ -1,0 +1,17 @@
+﻿@page "/"
+@attribute [Authorize]
+<h1>Hello, world!</h1>
+
+Welcome to your new app.
+
+<AuthorizeView>
+    <Authorized>
+        Hello, @context.User.Identity.Name!
+        <a href="logout">Log out</a>
+    </Authorized>
+    <NotAuthorized>
+        <a href="login?redirectUri=https://localhost:5001/">Log in</a>
+    </NotAuthorized>
+</AuthorizeView>
+
+<SurveyPrompt Title="How is Blazor working for you," />
