@@ -1,0 +1,181 @@
+﻿@page "/activityFeed"
+@inject IJSRuntime JS;
+@inject NavigationManager NavigationManager
+@using Microsoft.AspNetCore.SignalR.Client
+@using System.Security.Claims
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject TokenProvider tokenProvider
+@using Microsoft.AspNetCore.Authorization
+
+@attribute [Authorize]
+
+<p>@response</p>
+
+<button class="btn btn-primary" @onclick="RequestPermission">Get Permission</button>
+<button class="btn btn-primary" @onclick="ClearComments">Clear Comments</button>
+<button class="btn btn-primary" @onclick="ClearChecks">Clear Checks</button>
+
+<p>Connected: @IsConnected</p>
+
+
+
+<h2>Comments</h2>
+<ul id="commentList">
+    @foreach (var comment in comments.OrderByDescending(c => c.Created))
+    {
+        @if (comment.ReplyToBody != null)
+        {
+            <li>
+                <span></span>
+                <div>
+                    <span>
+                        @comment.Created.ToShortDateString() @comment.Created.ToShortTimeString() - <a
+                    href="@comment.Uri">@comment.Title</a><br /><strong>@at@comment.ReplyToUser</strong>&nbsp;@comment.ReplyToBody
+                    </span>
+                </div>
+                <ul>
+                    <li>
+                        <div>
+                            <span>
+                                <strong>@at@comment.User</strong>@comment.Body
+                            </span>
+                        </div>
+                    </li>
+                </ul>
+            </li>
+        }
+        else
+        {
+            <li>
+                <div>
+                    <span>
+                        @comment.Created.ToShortDateString() @comment.Created.ToShortTimeString() - <a href="@comment.Uri">
+                            @comment.Title</a><br /><strong>@at@comment.User</strong>&nbsp;@comment.Body
+                    </span>
+                </div>
+            </li>
+        }
+    }
+</ul>
+<h2>Check Failures</h2>
+<ul id="messagesList">
+    @foreach (var message in checks)
+    {
+        <li>@message</li>
+    }
+</ul>
+
+
+@code {
+    private object permission;
+    private string response = "none";
+    private string icon = "images/github.png";
+    private object notif;
+    private string at = "@";
+    private string _authMessage;
+    private string _surnameMessage;
+    private IEnumerable<Claim> _claims = Enumerable.Empty<Claim>();
+
+    private async Task GetClaimsPrincipalData()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity.IsAuthenticated)
+        {
+            _authMessage = $"{user.Identity.Name} is authenticated.";
+            _claims = user.Claims;
+            _surnameMessage =
+            $"Surname: {user.FindFirst(c => c.Type == ClaimTypes.Surname)?.Value}";
+        }
+        else
+        {
+            _authMessage = "The user is NOT authenticated.";
+        }
+    }
+
+    private async Task RequestPermission()
+    {
+        permission = await JS.InvokeAsync<object>("requestPermission");
+        await GetClaimsPrincipalData();
+    }
+
+    private void ClearComments()
+    {
+        comments.Clear();
+        StateHasChanged();
+    }
+
+    private void ClearChecks()
+    {
+        checks.Clear();
+        StateHasChanged();
+    }
+
+    private async Task CreateNotifcationAsync(DateTime updated, string id, string title, string body, string url)
+    {
+        var options = new
+        {
+            Body = body,
+            Icon = icon,
+            Renotify = true, // By default a notification is not overwritten, so there can only be one.
+            RequireInteraction = false,
+            Tag = id,
+            TimeStamp = updated,
+            Uri = url
+        };
+
+        notif = await JS.InvokeAsync<object>("createNotification", title, options);
+
+    }
+
+    private HubConnection hubConnection;
+    private List<string> checks = new List<string>(30) { "foo" };
+    private List<CommentModel> comments = new List<CommentModel>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+
+        hubConnection = new HubConnectionBuilder()
+        .WithAutomaticReconnect()
+        .WithUrl(NavigationManager.ToAbsoluteUri("/notificationshub"), options =>
+        {
+            //options.UseDefaultCredentials = true;
+            //options.AccessTokenProvider = () => Task.FromResult(tokenProvider.AccessToken);
+            //options.HttpMessageHandlerFactory = innerHandler =>
+             //   new IncludeRequestCredentialsMessageHandler(tokenProvider) { InnerHandler = innerHandler };
+        })
+
+        .Build();
+
+        hubConnection.On<DateTime, string, string, string, string>("CheckStatus", (updated, id, title, message, url) =>
+        {
+            var encodedMsg = $"{title}: {message}";
+            checks.Add(encodedMsg);
+            StateHasChanged();
+            CreateNotifcationAsync(updated, id, title, message, url).GetAwaiter().GetResult();
+        });
+
+        hubConnection.On<CommentModel>("Comment", (comment) =>
+        {
+            if (comments.Count == 30)
+            {
+                comments.RemoveAt(0);
+            }
+            comment.Created = comment.Created.ToLocalTime();
+            comments.Add(comment);
+            StateHasChanged();
+            CreateNotifcationAsync(comment.Created, comment.Id, comment.Title, $"@{comment.User}: {comment.Body}",
+    comment.Uri).GetAwaiter().GetResult();
+        });
+
+
+        await hubConnection.StartAsync();
+    }
+
+    public bool IsConnected =>
+    hubConnection.State == HubConnectionState.Connected;
+
+    public async ValueTask DisposeAsync() { await hubConnection.DisposeAsync(); }
+}

@@ -1,9 +1,31 @@
-﻿<AuthorizeView>
+﻿@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<AuthorizeView>
     <Authorized>
-        Hello, @context.User.Identity.Name!
+        <img src=@AvatarUri style="width: 30px; padding: 0px 4px;" />
         <a href="logout">Log out</a>
     </Authorized>
     <NotAuthorized>
         <a href="login?redirectUri=https://localhost:5001/">Log in</a>
     </NotAuthorized>
 </AuthorizeView>
+
+@code{
+    private string AvatarUri = "https://avatars.githubusercontent.com/b/1578?s=120&v=4";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await GetAvatar();
+    }
+
+    private async Task GetAvatar()
+    {
+        AuthenticationState context = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        if (context.User.Claims.Any())
+        {
+            AvatarUri = context.User.Claims.SingleOrDefault(c => c.Type == "urn:github:avatar").Value;
+            Console.WriteLine(AvatarUri);
+            StateHasChanged();
+        }
+    }
+}

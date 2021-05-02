@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.SignalR;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System;
@@ -7,8 +8,9 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace GitHubNotifications.Server.Controllers
+namespace GitHubNotifications
 {
+    // [Authorize]
     public class NotificationsHub : Hub
     {
         private readonly ILogger<NotificationsHub> _logger;

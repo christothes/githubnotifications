@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace GitHubNotifications
 {
-    public class Comment
+    public class CommentModel
     {
         public string Id { get; set; }
         public string User { get; set; }
@@ -16,7 +16,7 @@ namespace GitHubNotifications
         public string ReplyToUser { get; set; }
         public string ReplyToBody { get; set; }
 
-        public Comment(string id, string user, string uri, DateTime created, string title, string body, string replyToUser, string replyToBody)
+        public CommentModel(string id, string user, string uri, DateTime created, string title, string body, string replyToUser, string replyToBody)
         {
             Id = id;
             User = user;

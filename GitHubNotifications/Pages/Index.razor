@@ -7,11 +7,18 @@ Welcome to your new app.
 <AuthorizeView>
     <Authorized>
         Hello, @context.User.Identity.Name!
+         @if (@context.User.Claims.Count() > 0)
+        {
+            <ul>
+                @foreach (var claim in @context.User.Claims)
+                {
+                    <li>@claim.Type: @claim.Value</li>
+                }
+            </ul>
+        }
         <a href="logout">Log out</a>
     </Authorized>
     <NotAuthorized>
         <a href="login?redirectUri=https://localhost:5001/">Log in</a>
     </NotAuthorized>
 </AuthorizeView>
-
-<SurveyPrompt Title="How is Blazor working for you," />

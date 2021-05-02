@@ -4,7 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
-namespace GitHubNotifications.Server
+namespace GitHubNotifications.Models
 {
     public class PRComment : ITableEntity
     {

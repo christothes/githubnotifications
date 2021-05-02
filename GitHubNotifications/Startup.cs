@@ -1,19 +1,12 @@
 using GitHubNotifications.Data;
 using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.HttpsPolicy;
-using Microsoft.AspNetCore.Mvc.Authorization;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Identity.Web;
-using Microsoft.Identity.Web.UI;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -21,8 +14,6 @@ using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Azure.Core;
-using Azure.Core.Extensions;
 using Azure.Identity;
 using Azure.Messaging.EventHubs;
 using Azure.Storage.Blobs;
@@ -62,9 +53,16 @@ namespace GitHubNotifications
                 });
             var cred = new ChainedTokenCredential(new ManagedIdentityCredential(), new AzureCliCredential());
             string containerUri = Configuration["ConnectionStrings:storageconnection:blob"] + "checkpoint";
+            var containerClient = new BlobContainerClient(new Uri(containerUri), cred);
+            containerClient.CreateIfNotExists();
+            var blobs = containerClient.GetBlobs().ToList();
+            foreach (var blob in blobs)
+            {
+                containerClient.DeleteBlob(blob.Name);
+            }
             services.AddSingleton(
                 new EventProcessorClient(
-                    new BlobContainerClient(new Uri(containerUri), cred),
+                containerClient,
                     Configuration["ConnectionStrings:storageconnection:eventhub:cg"],
                     Configuration["ConnectionStrings:storageconnection:eventhub:ns"],
                     Configuration["ConnectionStrings:storageconnection:eventhub:name"],
@@ -85,8 +83,8 @@ namespace GitHubNotifications
                 .AddCookie(
                     options =>
                     {
-                    //     options.LoginPath = "/Login";
-                    //     options.AccessDeniedPath = "/Unauthorized";
+                        options.LoginPath = "/Login";
+                        //     options.AccessDeniedPath = "/Unauthorized";
                     })
                 .AddOAuth(
                     "GitHub",
@@ -174,7 +172,9 @@ namespace GitHubNotifications
             services.AddHttpContextAccessor();
             services.AddSingleton<IConfigureOptions<AuthorizationOptions>, ConfigureOrganizationPolicy>();
             services.AddSingleton<IAuthorizationHandler, OrganizationRequirementHandler>();
-            // services.AddHostedService<EventHubProcessor>();
+            services.AddHostedService<EventHubProcessor>();
+            services.AddHttpClient();
+            services.AddScoped<TokenProvider>();
         }
 
         private static async Task<string> GetMicrosoftEmailAsync(OAuthCreatingTicketContext context)
@@ -237,6 +237,7 @@ namespace GitHubNotifications
                 endpoints.MapControllers();
                 endpoints.MapBlazorHub();
                 endpoints.MapFallbackToPage("/_Host");
+                endpoints.MapHub<NotificationsHub>("notificationshub");
             });
         }
     }

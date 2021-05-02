@@ -1,8 +1,5 @@
-﻿using Azure.Core;
-using Azure.Data.Tables;
-using Azure.Identity;
+﻿using Azure.Data.Tables;
 using Azure.Messaging.EventHubs;
-using Azure.Messaging.EventHubs.Consumer;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -14,19 +11,19 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Azure.Messaging.EventHubs.Processor;
+using GitHubNotifications.Models;
 
-namespace GitHubNotifications.Server.Controllers
+namespace GitHubNotifications
 {
     public class EventHubProcessor : IHostedService, IDisposable
     {
-        private int executionCount = 0;
         public const string PR_PK = "pr";
         private readonly ILogger<EventHubProcessor> _logger;
         private readonly IHubContext<NotificationsHub> _hubContext;
         private readonly EventProcessorClient _processor;
         private readonly TableServiceClient tableService;
-        private TableClient prTable;
-        StringBuilder sbComment = new();
+        private readonly TableClient prTable;
+        readonly StringBuilder sbComment = new();
 
         public EventHubProcessor(
             ILogger<EventHubProcessor> logger,
@@ -136,16 +133,16 @@ namespace GitHubNotifications.Server.Controllers
                         }
                         if (webhookObj is PullRequestReviewEvent r)
                         {
-                            await prTable.UpsertEntityAsync<PREntity>(
+                            await prTable.UpsertEntityAsync(
                                 new PREntity { PartitionKey = PR_PK, RowKey = r.PullRequest.Head.Sha, Title = r.PullRequest.Title, Url = r.PullRequest.HtmlUrl },
                                 TableUpdateMode.Replace);
 
                             var tableName = GetPRCommentTableName(r.PullRequest);
                             var commentTable = tableService.GetTableClient(tableName);
-                            if ((await tableService.GetTablesAsync(t => t.Name == tableName).ToEnumerableAsync()).Count == 0)
-                            {
-                                await commentTable.CreateIfNotExistsAsync();
-                            }
+                            // if ((await tableService.GetTablesAsync(t => t.Name == tableName).ToEnumerableAsync()).Count == 0)
+                            // {
+                            await commentTable.CreateIfNotExistsAsync();
+                            // }
                             await commentTable.UpsertEntityAsync<PRComment>(new PRComment(r.Comment), TableUpdateMode.Replace);
                             await SendPrCommentMail(r, commentTable);
                         }
@@ -193,15 +190,15 @@ namespace GitHubNotifications.Server.Controllers
             _logger.LogInformation(body);
 
             await _hubContext.Clients.All.SendAsync(
-                "Comment",
-                pr.Comment.UpdatedAt.ToLocalTime(),
+                "Comment", new CommentModel(
                 pr.Comment.Id.ToString(),
                 pr.Comment.User.Login,
+                pr.Comment.HtmlUrl,
+                pr.Comment.UpdatedAt.ToLocalTime(),
                 pr.PullRequest.Title,
                 pr.Comment.Body,
-                pr.Comment.HtmlUrl,
                 inReplyTo?.Author,
-                inReplyTo?.Body);
+                inReplyTo?.Body));
         }
 
         public async Task SendCheckStatusMail(CheckSuiteEvent webhookEvent)
@@ -213,7 +210,6 @@ namespace GitHubNotifications.Server.Controllers
             PREntity prDetails;
             try
             {
-                //(!PRCache.TryGetValue(webhookEvent.CheckSuite.HeadCommit.Id, out prDetails))
                 prDetails = await prTable.GetEntityAsync<PREntity>(PR_PK, webhookEvent.CheckSuite.HeadCommit.Id);
             }
             catch

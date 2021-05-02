@@ -4,6 +4,7 @@
 @{
     Layout = null;
 }
+@using Microsoft.AspNetCore.Authentication
 
 <!DOCTYPE html>
 <html lang="en">
@@ -15,9 +16,19 @@
     <link rel="stylesheet" href="css/bootstrap/bootstrap.min.css" />
     <link href="css/site.css" rel="stylesheet" />
     <link href="GitHubNotifications.styles.css" rel="stylesheet" />
+    <script src="scripts/notifications.js"></script>
 </head>
 <body>
-    <component type="typeof(App)" render-mode="ServerPrerendered" />
+    @{
+    var token = await HttpContext.GetTokenAsync("access_token");
+    var refresh = await HttpContext.GetTokenAsync("refresh_token");
+    var tokens = new InitialApplicationState
+    {
+        AccessToken = token,
+        RefreshToken = refresh
+    };
+}
+    <component type="typeof(App)" param-InitialState="tokens" render-mode="ServerPrerendered" />
 
     <div id="blazor-error-ui">
         <environment include="Staging,Production">
