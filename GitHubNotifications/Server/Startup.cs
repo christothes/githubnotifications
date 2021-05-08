@@ -88,7 +88,7 @@ namespace GitHubNotifications.Server
                         options.ClientId = Configuration["Github:ClientId"];
                         options.ClientSecret = Configuration["Github:ClientSecret"];
                         options.CallbackPath = new PathString("/Counter");
-                        options.ReturnUrlParameter = "https://localhost:5001/";
+                        options.ReturnUrlParameter = Environment.GetEnvironmentVariable("RETURN_URL");
                         options.Scope.Add("user:email");
 
                         options.AuthorizationEndpoint = "https://github.com/login/oauth/authorize";
