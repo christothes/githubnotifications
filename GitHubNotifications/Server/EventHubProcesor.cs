@@ -132,7 +132,7 @@ namespace GitHubNotifications
                                 { }
                             }
                             await prTable.UpsertEntityAsync(
-                                new PREntity { PartitionKey = PR_PK, RowKey = pr.PullRequest.Head.Sha, Title = pr.PullRequest.Title, Url = pr.PullRequest.HtmlUrl, Author = pr.PullRequest.User.Login},
+                                new PREntity { PartitionKey = PR_PK, RowKey = pr.PullRequest.Head.Sha, Title = pr.PullRequest.Title, Url = pr.PullRequest.HtmlUrl, Author = pr.PullRequest.User.Login },
                                 TableUpdateMode.Replace);
                         }
                         if (webhookObj is CheckSuiteEvent ch)
@@ -142,7 +142,7 @@ namespace GitHubNotifications
                         if (webhookObj is PullRequestReviewEvent r)
                         {
                             await prTable.UpsertEntityAsync(
-                                new PREntity { PartitionKey = PR_PK, RowKey = r.PullRequest.Head.Sha, Title = r.PullRequest.Title, Url = r.PullRequest.HtmlUrl, Author = r.PullRequest.User.Login},
+                                new PREntity { PartitionKey = PR_PK, RowKey = r.PullRequest.Head.Sha, Title = r.PullRequest.Title, Url = r.PullRequest.HtmlUrl, Author = r.PullRequest.User.Login },
                                 TableUpdateMode.Replace);
 
                             await commentTable.UpsertEntityAsync(new PRComment(r), TableUpdateMode.Replace);
@@ -176,19 +176,30 @@ namespace GitHubNotifications
 
             _logger.LogInformation($"{pr.Comment.CreatedAt.ToLocalTime()} PRComment Url: {pr.Comment.HtmlUrl}");
 
-            await _hubContext.Clients.All.SendAsync(
-                "NewComment", new CommentModel(
+            CommentModel parent = null;
+            if (inReplyTo != null)
+            {
+                parent = new CommentModel(
+                    inReplyTo.RowKey,
+                    inReplyTo.Author,
+                    inReplyTo.Uri,
+                    inReplyTo.Created.ToLocalTime(),
+                    inReplyTo.PrTitle,
+                    inReplyTo.Body,
+                    null);
+            }
+
+            var model = new CommentModel(
                 pr.Comment.Id.ToString(),
                 pr.Comment.User.Login,
                 pr.Comment.HtmlUrl,
                 pr.Comment.UpdatedAt.ToLocalTime(),
                 pr.PullRequest.Title,
                 pr.Comment.Body,
-                pr.Comment.InReplyToId.ToString(),
-                inReplyTo?.Author,
-                inReplyTo?.Body));
+                parent);
 
-            _logger.LogWarning("sent comment to Hub");
+            await _hubContext.Clients.All.SendAsync(
+                "NewComment", model);
         }
 
         public async Task SendCheckStatusMail(CheckSuiteEvent webhookEvent)

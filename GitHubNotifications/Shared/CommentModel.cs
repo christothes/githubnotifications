@@ -23,17 +23,14 @@ namespace GitHubNotifications.Shared
         [JsonPropertyName("body")]
         public string Body { get; set; }
 
-        [JsonPropertyName("replyToId")]
-
+        [JsonPropertyName("repltToId")]
         public string ReplyToId { get; set; }
 
-        [JsonPropertyName("replyToAuthor")]
-        public string ReplyToAuthor { get; set; }
+        [JsonPropertyName("parent")]
+        public CommentModel Parent { get; set; }
 
-        [JsonPropertyName("replyToBody")]
-        public string ReplyToBody { get; set; }
 
-        public CommentModel(string id, string user, string uri, DateTime created, string title, string body, string replyToId, string replyToUser, string replyToBody)
+        public CommentModel(string id, string user, string uri, DateTime created, string title, string body, CommentModel parent)
         {
             Id = id;
             Author = user;
@@ -41,9 +38,8 @@ namespace GitHubNotifications.Shared
             Created = created;
             Title = title;
             Body = body;
-            ReplyToId = replyToId;
-            ReplyToAuthor = replyToUser;
-            ReplyToBody = replyToBody;
+            Parent = parent;
+            ReplyToId = parent?.Id;
         }
     }
 }
