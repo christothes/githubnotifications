@@ -53,11 +53,7 @@ namespace GitHubNotifications.Server
             string containerUri = Configuration["ConnectionStrings:storageconnection:blob"] + "checkpoint";
             var containerClient = new BlobContainerClient(new Uri(containerUri), cred);
             containerClient.CreateIfNotExists();
-            var blobs = containerClient.GetBlobs().ToList();
-            foreach (var blob in blobs)
-            {
-                containerClient.DeleteBlob(blob.Name);
-            }
+
             services.AddSingleton(
                 new EventProcessorClient(
                     containerClient,
