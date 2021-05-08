@@ -1,4 +1,4 @@
-namespace GitHubNotifications
+namespace GitHubNotifications.Shared
 {
     public class ClaimConstants
     {

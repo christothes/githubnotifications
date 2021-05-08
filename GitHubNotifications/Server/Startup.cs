@@ -22,6 +22,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.Extensions.Azure;
 using Microsoft.Extensions.Options;
+using GitHubNotifications.Shared;
 
 namespace GitHubNotifications.Server
 {
