@@ -1,26 +1,40 @@
-﻿<li>
+﻿<div class="list-group-item">
     <div>
-        <span>
-            @Comment.created.ToShortDateString() @Comment.created.ToShortTimeString() - <a href="@Comment.uri">@Comment.title</a><br/>
-            <strong>@at@Comment.replyToAuthor</strong>&nbsp;@Comment.replyToBody
-        </span>
+        <a href="@Comment.uri">@Comment.title</a><br />
+        <strong>@at@Comment.author</strong> -
+        @if (@Comment.created.Day == DateTime.Now.Day)
+        {
+            @Comment.created.ToString("h:mm tt")
+        }
+        else
+        {
+            @Comment.created.ToString("M/dd h:mm tt")
+        }
     </div>
-    @if (Comment.Replies?.Count > 0)
+    &nbsp;@FromMarkdown(Comment.body)
+    @if (Comment.replies?.Count > 0)
     {
-        <ul>
-            @foreach (var reply in Comment.Replies.OrderByDescending(c => c.created))
+        <div class="list-group" style="max-width: inherit; overflow-wrap: anywhere;">
+            @foreach (var reply in Comment.replies.OrderBy(c => c.created))
             {
-                <li>
+                <div class="list-group-item">
                     <div>
-                        <span>
-                            <strong>@at@reply.author</strong> @reply.body
-                        </span>
+                        <strong>@at@reply.author</strong> -
+                        @if (@reply.created.Day == DateTime.Now.Day)
+                        {
+                            @reply.created.ToString("h:mm tt")
+                        }
+                        else
+                        {
+                            @reply.created.ToString("M/dd h:mm tt")
+                        }
                     </div>
-                </li>
+                    &nbsp;@FromMarkdown(reply.body)
+                </div>
             }
-        </ul>
+        </div>
     }
-</li>
+</div>
 
 @code {
 
@@ -28,5 +42,9 @@
     public Comment Comment { get; set; }
 
     private string at = "@";
-
+    private MarkupString FromMarkdown(string s)
+    {
+        var pipeline = new MarkdownPipelineBuilder().UseAdvancedExtensions().Build();
+        return new MarkupString(Markdown.ToHtml(s, pipeline));
+    }
 }

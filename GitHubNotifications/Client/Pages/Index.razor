@@ -10,12 +10,12 @@
         Notifications: @permission, Hub connected: @IsConnected
 
         <h2>Comments</h2>
-        <ul id="commentList">
-            @foreach (var comment in comments.OrderByDescending(c => c.created))
-            {
-                <CommentItem Comment="@comment"></CommentItem>
-            }
-        </ul>
+            <div id="commentList" class="list-group" style="overflow-wrap: anywhere;">
+                @foreach (var comment in commentLookup.Values.OrderByDescending(c => c.created))
+                {
+                    <CommentItem Comment="@comment"></CommentItem>
+                }
+            </div>
         <h2>Check Failures</h2>
         <ul id="messagesList">
             @foreach (var message in checks)
@@ -34,7 +34,6 @@
     private string permission;
     private string icon = "images/github.png";
     private object notif;
-    private string at = "@";
 
     private async Task RequestPermission()
     {
@@ -48,7 +47,7 @@
 
     private void ClearComments()
     {
-        comments.Clear();
+        commentLookup.Clear();
         StateHasChanged();
     }
 
@@ -60,7 +59,7 @@
 
     private async Task CreateNotifcationAsync(DateTime updated, string id, string title, string body, string url)
     {
-        var options = new
+        @* var options = new
         {
             Body = body,
             Icon = icon,
@@ -75,12 +74,12 @@
             notif = await JS.InvokeAsync<object>("createNotification", title, options);
         }
         catch (Exception)
-        { }
+        { } *@
     }
 
     private HubConnection hubConnection;
     private List<string> checks = new(30);
-    private List<Comment> comments = new();
+    //private List<Comment> comments = new();
     private Dictionary<string, Comment> commentLookup = new();
     private string userInput = "my input";
     private string messageInput = "test input";
@@ -88,9 +87,14 @@
     protected override async Task OnInitializedAsync()
     {
         permission = await GetPermissionState();
+        if (permission != "granted")
+        {
+            await RequestPermission();
+        }
+
         hubConnection = new HubConnectionBuilder()
-            .WithUrl(NavigationManager.ToAbsoluteUri("/notificationshub"))
-            .Build();
+        .WithUrl(NavigationManager.ToAbsoluteUri("/notificationshub"))
+        .Build();
 
         hubConnection.On<DateTime, string, string, string, string>("CheckStatus", (updated, id, title, message, url) =>
         {
@@ -102,30 +106,27 @@
 
         hubConnection.On<Comment>("NewComment", (comment) =>
         {
-            if (string.IsNullOrEmpty(comment.replyToId))
+            if (null == comment.parent)
             {
                 commentLookup[comment.id] = comment;
             }
             else
             {
-                if (commentLookup.TryGetValue(comment.id, out var parent))
+                if (commentLookup.TryGetValue(comment.parent.id, out var parent))
                 {
-                    parent.Replies ??= new List<Comment>();
-                    parent.Replies.Add(comment);
+                    parent.replies ??= new List<Comment>();
+                    parent.replies.Add(comment);
+                    parent.sortDate = comment.created;
+                }
+                else
+                {
+                    commentLookup[comment.parent.id] = comment.parent;
+                    comment.parent.replies = new List<Comment>{comment};
                 }
             }
-            if (comments.Count == 30)
-            {
-                comments.RemoveAt(0);
-            }
-            comments.Add(comment);
+
             StateHasChanged();
-            CreateNotifcationAsync(
-                comment.created,
-                comment.id,
-                comment.title,
-                $"@{comment.author}: {comment.body}",
-                comment.uri).GetAwaiter().GetResult();
+            CreateNotifcationAsync(comment.created,comment.id,comment.title, $"@{comment.author}: {comment.body}",comment.uri).GetAwaiter().GetResult();
         });
 
         var AuthState = await AuthStateProvider.GetAuthenticationStateAsync();
@@ -140,7 +141,7 @@
     async Task<string> GetPermissionState() => await JS.InvokeAsync<string>("currentPermission");
 
     public bool IsConnected =>
-        hubConnection?.State == HubConnectionState.Connected;
+    hubConnection?.State == HubConnectionState.Connected;
 
     public async ValueTask DisposeAsync() { await hubConnection.DisposeAsync(); }
 }

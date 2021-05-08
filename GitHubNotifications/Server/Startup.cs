@@ -48,15 +48,12 @@ namespace GitHubNotifications.Server
                     builder.AddBlobServiceClient(Configuration["ConnectionStrings:storageconnection:blob"], true);
                     builder.AddTableServiceClient(Configuration["ConnectionStrings:storageconnection"]);
                 });
+            //var tableConnString = new TableConnectionString(Configuration["ConnectionStrings:storageconnection"]);
             var cred = new ChainedTokenCredential(new ManagedIdentityCredential(), new VisualStudioCredential());
             string containerUri = Configuration["ConnectionStrings:storageconnection:blob"] + "checkpoint";
             var containerClient = new BlobContainerClient(new Uri(containerUri), cred);
             containerClient.CreateIfNotExists();
-            var blobs = containerClient.GetBlobs().ToList();
-            foreach (var blob in blobs)
-            {
-                containerClient.DeleteBlob(blob.Name);
-            }
+
             services.AddSingleton(
                 new EventProcessorClient(
                     containerClient,

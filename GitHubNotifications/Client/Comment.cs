@@ -11,11 +11,9 @@ namespace GitHubNotifications.Client
         public DateTime created { get; set; }
         public string title { get; set; }
         public string body { get; set; }
-
         public string replyToId { get; set; }
-        public string replyToAuthor { get; set; }
-        public string replyToBody { get; set; }
-
-        public List<Comment> Replies { get; set; }
+        public Comment parent { get; set; }
+        public List<Comment> replies { get; set; }
+        public DateTime sortDate { get; set; }
     }
 }
