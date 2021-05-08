@@ -1,0 +1,32 @@
+﻿<li>
+    <div>
+        <span>
+            @Comment.created.ToShortDateString() @Comment.created.ToShortTimeString() - <a href="@Comment.uri">@Comment.title</a><br/>
+            <strong>@at@Comment.replyToAuthor</strong>&nbsp;@Comment.replyToBody
+        </span>
+    </div>
+    @if (Comment.Replies?.Count > 0)
+    {
+        <ul>
+            @foreach (var reply in Comment.Replies.OrderByDescending(c => c.created))
+            {
+                <li>
+                    <div>
+                        <span>
+                            <strong>@at@reply.author</strong> @reply.body
+                        </span>
+                    </div>
+                </li>
+            }
+        </ul>
+    }
+</li>
+
+@code {
+
+    [Parameter]
+    public Comment Comment { get; set; }
+
+    private string at = "@";
+
+}

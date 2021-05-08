@@ -131,8 +131,8 @@ namespace GitHubNotifications
                                 catch
                                 { }
                             }
-                            await prTable.UpsertEntityAsync<PREntity>(
-                                new PREntity { PartitionKey = PR_PK, RowKey = pr.PullRequest.Head.Sha, Title = pr.PullRequest.Title, Url = pr.PullRequest.HtmlUrl },
+                            await prTable.UpsertEntityAsync(
+                                new PREntity { PartitionKey = PR_PK, RowKey = pr.PullRequest.Head.Sha, Title = pr.PullRequest.Title, Url = pr.PullRequest.HtmlUrl, Author = pr.PullRequest.User.Login},
                                 TableUpdateMode.Replace);
                         }
                         if (webhookObj is CheckSuiteEvent ch)
@@ -142,7 +142,7 @@ namespace GitHubNotifications
                         if (webhookObj is PullRequestReviewEvent r)
                         {
                             await prTable.UpsertEntityAsync(
-                                new PREntity { PartitionKey = PR_PK, RowKey = r.PullRequest.Head.Sha, Title = r.PullRequest.Title, Url = r.PullRequest.HtmlUrl },
+                                new PREntity { PartitionKey = PR_PK, RowKey = r.PullRequest.Head.Sha, Title = r.PullRequest.Title, Url = r.PullRequest.HtmlUrl, Author = r.PullRequest.User.Login},
                                 TableUpdateMode.Replace);
 
                             await commentTable.UpsertEntityAsync(new PRComment(r), TableUpdateMode.Replace);
@@ -174,19 +174,7 @@ namespace GitHubNotifications
                 }
             }
 
-            _logger.LogWarning($"{pr.Comment.CreatedAt.ToLocalTime()} PRComment Url: {pr.Comment.HtmlUrl}");
-
-
-            await _hubContext.Clients.All.SendAsync(
-                "Testing", new CommentModel(
-                pr.Comment.Id.ToString(),
-                pr.Comment.User.Login,
-                pr.Comment.HtmlUrl,
-                pr.Comment.UpdatedAt.ToLocalTime(),
-                pr.PullRequest.Title,
-                pr.Comment.Body,
-                inReplyTo?.Author,
-                inReplyTo?.Body));
+            _logger.LogInformation($"{pr.Comment.CreatedAt.ToLocalTime()} PRComment Url: {pr.Comment.HtmlUrl}");
 
             await _hubContext.Clients.All.SendAsync(
                 "NewComment", new CommentModel(
@@ -196,6 +184,7 @@ namespace GitHubNotifications
                 pr.Comment.UpdatedAt.ToLocalTime(),
                 pr.PullRequest.Title,
                 pr.Comment.Body,
+                pr.Comment.InReplyToId.ToString(),
                 inReplyTo?.Author,
                 inReplyTo?.Body));
 

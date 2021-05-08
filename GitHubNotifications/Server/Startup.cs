@@ -29,10 +29,7 @@ namespace GitHubNotifications.Server
     {
         public static string RequireOrganizationPolicy = "RequireOrganization";
 
-        public Startup(IConfiguration configuration)
-        {
-            Configuration = configuration;
-        }
+        public Startup(IConfiguration configuration) { Configuration = configuration; }
 
         public IConfiguration Configuration { get; }
 
@@ -42,7 +39,8 @@ namespace GitHubNotifications.Server
         {
             services.AddControllersWithViews();
             services.AddRazorPages();
-            services.AddSignalR();
+            services.AddSignalR()
+                .AddJsonProtocol(options => { options.PayloadSerializerOptions.PropertyNameCaseInsensitive = true; });
 
             services.AddAzureClients(
                 builder =>
@@ -61,7 +59,7 @@ namespace GitHubNotifications.Server
             }
             services.AddSingleton(
                 new EventProcessorClient(
-                containerClient,
+                    containerClient,
                     Configuration["ConnectionStrings:storageconnection:eventhub:cg"],
                     Configuration["ConnectionStrings:storageconnection:eventhub:ns"],
                     Configuration["ConnectionStrings:storageconnection:eventhub:name"],
@@ -198,13 +196,14 @@ namespace GitHubNotifications.Server
             app.UseAuthentication();
             app.UseAuthorization();
 
-            app.UseEndpoints(endpoints =>
-            {
-                endpoints.MapRazorPages();
-                endpoints.MapControllers();
-                endpoints.MapFallbackToFile("index.html");
-                endpoints.MapHub<NotificationsHub>("notificationshub");
-            });
+            app.UseEndpoints(
+                endpoints =>
+                {
+                    endpoints.MapRazorPages();
+                    endpoints.MapControllers();
+                    endpoints.MapFallbackToFile("index.html");
+                    endpoints.MapHub<NotificationsHub>("notificationshub");
+                });
         }
 
         private static async Task<string> GetMicrosoftEmailAsync(OAuthCreatingTicketContext context)

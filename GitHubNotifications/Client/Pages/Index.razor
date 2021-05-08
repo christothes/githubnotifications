@@ -5,60 +5,22 @@
 @using GitHubNotifications.Shared
 @using Microsoft.AspNetCore.SignalR.Client
 
-<h1>GitHub Notifications</h1>
-
 <AuthorizeView>
     <Authorized>
-        <strong>Hello, @context.User.Identity.Name!</strong>
-        <p>Notifications: @permission</p>
-        <p>Hub connected: @IsConnected</p>
-        @if (!@IsConnected)
-                {
-        <button class="btn btn-primary" @onclick="Connect">Connect</button>
-        }
+        Notifications: @permission, Hub connected: @IsConnected
+
         <h2>Comments</h2>
         <ul id="commentList">
             @foreach (var comment in comments.OrderByDescending(c => c.created))
-                {
-            @if (comment.replyToBody != null)
             {
-                <li>
-                    <span></span>
-                    <div>
-                        <span>
-                            @comment.created.ToShortDateString() @comment.created.ToShortTimeString() - <a
-                            href="@comment.uri">@comment.title</a><br /><strong>@at@comment.replyToAuthor</strong>&nbsp;@comment.replyToBody
-                        </span>
-                    </div>
-                    <ul>
-                        <li>
-                            <div>
-                                <span>
-                                    <strong>@at@comment.author</strong>@comment.body
-                                </span>
-                            </div>
-                        </li>
-                    </ul>
-                </li>
-            }
-            else
-            {
-                <li>
-                    <div>
-                        <span>
-                            @comment.created.ToShortDateString() @comment.created.ToShortTimeString() - <a
-                            href="@comment.uri">@comment.title</a><br /><strong>@at@comment.author</strong>&nbsp;@comment.body
-                        </span>
-                    </div>
-                </li>
-            }
+                <CommentItem Comment="@comment"></CommentItem>
             }
         </ul>
         <h2>Check Failures</h2>
         <ul id="messagesList">
             @foreach (var message in checks)
-                {
-            <li>@message</li>
+            {
+                <li>@message</li>
             }
         </ul>
     </Authorized>
@@ -110,7 +72,6 @@
         };
         try
         {
-            await Send();
             notif = await JS.InvokeAsync<object>("createNotification", title, options);
         }
         catch (Exception)
@@ -118,8 +79,9 @@
     }
 
     private HubConnection hubConnection;
-    private List<string> checks = new List<string>(30);
-    private List<Comment> comments = new List<Comment>();
+    private List<string> checks = new(30);
+    private List<Comment> comments = new();
+    private Dictionary<string, Comment> commentLookup = new();
     private string userInput = "my input";
     private string messageInput = "test input";
 
@@ -127,13 +89,12 @@
     {
         permission = await GetPermissionState();
         hubConnection = new HubConnectionBuilder()
-        .WithUrl(NavigationManager.ToAbsoluteUri("/notificationshub"))
-        .Build();
+            .WithUrl(NavigationManager.ToAbsoluteUri("/notificationshub"))
+            .Build();
 
         hubConnection.On<DateTime, string, string, string, string>("CheckStatus", (updated, id, title, message, url) =>
         {
             var encodedMsg = $"{title}: {message}";
-            Console.WriteLine(encodedMsg);
             checks.Add(encodedMsg);
             StateHasChanged();
             CreateNotifcationAsync(updated, id, title, message, url).GetAwaiter().GetResult();
@@ -141,7 +102,18 @@
 
         hubConnection.On<Comment>("NewComment", (comment) =>
         {
-            Console.WriteLine(comment.body);
+            if (string.IsNullOrEmpty(comment.replyToId))
+            {
+                commentLookup[comment.id] = comment;
+            }
+            else
+            {
+                if (commentLookup.TryGetValue(comment.id, out var parent))
+                {
+                    parent.Replies ??= new List<Comment>();
+                    parent.Replies.Add(comment);
+                }
+            }
             if (comments.Count == 30)
             {
                 comments.RemoveAt(0);
@@ -163,18 +135,12 @@
         }
     }
 
-    async Task Connect()
-    {
-        await hubConnection.StartAsync();
-    }
+    async Task Connect() { await hubConnection.StartAsync(); }
 
     async Task<string> GetPermissionState() => await JS.InvokeAsync<string>("currentPermission");
 
-    async Task Send() =>
-    await hubConnection.SendAsync("SendMessage", userInput, messageInput);
-
     public bool IsConnected =>
-    hubConnection?.State == HubConnectionState.Connected;
+        hubConnection?.State == HubConnectionState.Connected;
 
     public async ValueTask DisposeAsync() { await hubConnection.DisposeAsync(); }
 }

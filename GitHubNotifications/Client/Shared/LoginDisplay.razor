@@ -1,6 +1,6 @@
 ﻿<AuthorizeView>
     <Authorized>
-        <strong>Hello, @context.User.Identity.Name!</strong>
+        <img src="@context.User.Claims.FirstOrDefault(c =>c.Type == "urn:github:avatar").Value" style="max-width: 25px;"/>
         <a href="auth/logout">Log out</a>
     </Authorized>
     <NotAuthorized>
