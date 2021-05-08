@@ -116,6 +116,7 @@
                 {
                     parent.replies ??= new List<Comment>();
                     parent.replies.Add(comment);
+                    parent.sortDate = comment.created;
                 }
                 else
                 {

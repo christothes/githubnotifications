@@ -14,5 +14,6 @@ namespace GitHubNotifications.Client
         public string replyToId { get; set; }
         public Comment parent { get; set; }
         public List<Comment> replies { get; set; }
+        public DateTime sortDate { get; set; }
     }
 }

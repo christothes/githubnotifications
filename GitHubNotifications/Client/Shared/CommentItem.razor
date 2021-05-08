@@ -11,11 +11,11 @@
             @Comment.created.ToString("M/dd h:mm tt")
         }
     </div>
-    &nbsp;@Comment.body
+    &nbsp;@FromMarkdown(Comment.body)
     @if (Comment.replies?.Count > 0)
     {
         <div class="list-group" style="max-width: inherit; overflow-wrap: anywhere;">
-            @foreach (var reply in Comment.replies.OrderByDescending(c => c.created))
+            @foreach (var reply in Comment.replies.OrderBy(c => c.created))
             {
                 <div class="list-group-item">
                     <div>
@@ -29,7 +29,7 @@
                             @reply.created.ToString("M/dd h:mm tt")
                         }
                     </div>
-                    &nbsp;@reply.body
+                    &nbsp;@FromMarkdown(reply.body)
                 </div>
             }
         </div>
@@ -42,5 +42,9 @@
     public Comment Comment { get; set; }
 
     private string at = "@";
-
+    private MarkupString FromMarkdown(string s)
+    {
+        var pipeline = new MarkdownPipelineBuilder().UseAdvancedExtensions().Build();
+        return new MarkupString(Markdown.ToHtml(s, pipeline));
+    }
 }
