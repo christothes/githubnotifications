@@ -1,6 +1,6 @@
-namespace GitHubNotifications
+namespace GitHubNotifications.Shared
 {
-    public class ClaimConstants
+      public class ClaimConstants
     {
         public const string Login = "urn:github:login";
         public const string Url = "urn:github:url";

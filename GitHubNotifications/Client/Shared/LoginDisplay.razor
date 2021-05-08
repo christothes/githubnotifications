@@ -1,6 +1,6 @@
 ﻿<AuthorizeView>
     <Authorized>
-        <img src="@context.User.Claims.FirstOrDefault(c =>c.Type == "urn:github:avatar").Value" style="max-width: 25px;"/>
+        <img src="@context.User.Claims.FirstOrDefault(c =>c.Type == ClaimConstants.Avatar).Value" style="max-width: 25px;"/>
         <a href="auth/logout">Log out</a>
     </Authorized>
     <NotAuthorized>
