@@ -1,31 +1,35 @@
 ﻿<div class="list-group-item">
     <div>
         <a href="@Comment.uri">@Comment.title</a><br />
-        <strong>@at@Comment.author</strong>&nbsp;@Comment.body -
+        <strong>@at@Comment.author</strong> -
         @if (@Comment.created.Day == DateTime.Now.Day)
         {
             @Comment.created.ToString("h:mm tt")
         }
         else
         {
-            @Comment.created.ToString("MM/dd h:mm tt")
+            @Comment.created.ToString("M/dd h:mm tt")
         }
     </div>
+    &nbsp;@Comment.body
     @if (Comment.replies?.Count > 0)
     {
         <div class="list-group" style="max-width: inherit; overflow-wrap: anywhere;">
             @foreach (var reply in Comment.replies.OrderByDescending(c => c.created))
             {
                 <div class="list-group-item">
-                        <strong>@at@reply.author</strong> @reply.body -
+                    <div>
+                        <strong>@at@reply.author</strong> -
                         @if (@reply.created.Day == DateTime.Now.Day)
                         {
                             @reply.created.ToString("h:mm tt")
                         }
                         else
                         {
-                            @reply.created.ToString("MM/dd h:mm tt")
+                            @reply.created.ToString("M/dd h:mm tt")
                         }
+                    </div>
+                    &nbsp;@reply.body
                 </div>
             }
         </div>
