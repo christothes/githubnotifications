@@ -119,7 +119,7 @@
 
         var stringResult = await Http.GetStringAsync("Comment/GetSasUrl");
         var url = new Uri(stringResult);
-        tableClient = new TableClient(url, new AzureSasCredential(url.Query));
+        tableClient = new TableClient(url, new AzureSasCredential(url.Query), null);
         await LoadComments();
     }
 
