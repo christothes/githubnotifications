@@ -1,4 +1,5 @@
 ﻿using System.Security.Claims;
+using GitHubNotifications.Shared;
 
 namespace GitHubNotifications.Server
 {
@@ -6,7 +7,7 @@ namespace GitHubNotifications.Server
     {
         public static string GetGitHubLogin(this ClaimsPrincipal user)
         {
-            return user.FindFirst(c => c.Type == "urn:github:login")?.Value;
+            return user.FindFirst(c => c.Type == ClaimConstants.Login)?.Value;
         }
     }
 }
