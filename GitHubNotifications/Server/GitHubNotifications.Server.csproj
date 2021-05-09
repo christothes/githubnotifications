@@ -18,13 +18,12 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="5.0.5" NoWarn="NU1605" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="5.0.5" NoWarn="NU1605" />
-    <PackageReference Include="Microsoft.Identity.Web" Version="1.1.0" />
     <PackageReference Include="Microsoft.Identity.Web.UI" Version="1.1.0" />
-    <PackageReference Include="Azure.Data.Tables" Version="12.0.0-alpha.20210428.2" />
+    <PackageReference Include="Azure.Data.Tables" Version="12.0.0-alpha.20210507.1" />
     <PackageReference Include="Azure.Extensions.AspNetCore.Configuration.Secrets" Version="1.0.2" />
-    <PackageReference Include="Azure.Identity" Version="1.4.0-beta.5" />
-    <PackageReference Include="Azure.Messaging.EventHubs.Processor" Version="5.4.0" />
-    <PackageReference Include="Azure.Storage.Blobs" Version="12.9.0-beta.3" />
+    <PackageReference Include="Azure.Identity" Version="1.4.0-alpha.20210507.1" />
+    <PackageReference Include="Azure.Messaging.EventHubs.Processor" Version="5.5.0-alpha.20210507.1" />
+    <PackageReference Include="Azure.Storage.Blobs" Version="12.9.0-alpha.20210507.1" />
     <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" Version="6.0.0-preview.3.21201.13" />
     <PackageReference Include="Microsoft.Extensions.Azure" Version="1.1.0-beta.2" />
     <PackageReference Include="Microsoft.Identity.Web" Version="1.1.0" />
