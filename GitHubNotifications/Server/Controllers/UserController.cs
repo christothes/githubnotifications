@@ -7,18 +7,21 @@ using System.Security.Claims;
 using GitHubNotifications.Shared;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
+using Azure.Data.Tables;
 
 namespace WebApplication1.Server.Controllers
 {
-    [Route("[controller]")]
+    [Route("[controller]/[action]")]
     [ApiController]
     public class UserController : ControllerBase
     {
         private readonly ILogger<UserController> _logger;
+        private readonly TableServiceClient tableService;
 
-        public UserController(ILogger<UserController> logger)
+        public UserController(ILogger<UserController> logger, TableServiceClient tableService)
         {
             this._logger = logger;
+            this.tableService = tableService;
         }
         [HttpGet]
         [AllowAnonymous]

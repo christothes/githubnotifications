@@ -23,8 +23,8 @@ namespace GitHubNotifications.Shared
         [JsonPropertyName("body")]
         public string Body { get; set; }
 
-        [JsonPropertyName("repltToId")]
-        public string ReplyToId { get; set; }
+        [JsonPropertyName("parentId")]
+        public string ParentId { get; set; }
 
         [JsonPropertyName("parent")]
         public CommentModel Parent { get; set; }
@@ -39,7 +39,7 @@ namespace GitHubNotifications.Shared
             Title = title;
             Body = body;
             Parent = parent;
-            ReplyToId = parent?.Id;
+            ParentId = parent?.Id;
         }
     }
 }

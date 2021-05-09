@@ -40,6 +40,7 @@ namespace GitHubNotifications
             this.tableService = tableService;
             prTable = tableService.GetTableClient("prs");
             commentTable = tableService.GetTableClient("comments");
+            tableService.CreateTableIfNotExists("users");
             processor.ProcessErrorAsync += async (args) =>
             {
                 _logger.LogError(args.Exception.ToString());
@@ -132,7 +133,15 @@ namespace GitHubNotifications
                                 { }
                             }
                             await prTable.UpsertEntityAsync(
-                                new PREntity { PartitionKey = PR_PK, RowKey = pr.PullRequest.Head.Sha, Title = pr.PullRequest.Title, Url = pr.PullRequest.HtmlUrl, Author = pr.PullRequest.User.Login },
+                                new PREntity
+                                {
+                                    PartitionKey = PR_PK,
+                                    RowKey = pr.PullRequest.Head.Sha,
+                                    Title = pr.PullRequest.Title,
+                                    Url = pr.PullRequest.HtmlUrl,
+                                    Author = pr.PullRequest.User.Login,
+                                    Labels = string.Join(";", pr.PullRequest.Labels.Select(l => l.Name))
+                                },
                                 TableUpdateMode.Replace);
                         }
                         if (webhookObj is CheckSuiteEvent ch)
@@ -142,7 +151,15 @@ namespace GitHubNotifications
                         if (webhookObj is PullRequestReviewEvent r)
                         {
                             await prTable.UpsertEntityAsync(
-                                new PREntity { PartitionKey = PR_PK, RowKey = r.PullRequest.Head.Sha, Title = r.PullRequest.Title, Url = r.PullRequest.HtmlUrl, Author = r.PullRequest.User.Login },
+                                new PREntity
+                                {
+                                    PartitionKey = PR_PK,
+                                    RowKey = r.PullRequest.Head.Sha,
+                                    Title = r.PullRequest.Title,
+                                    Url = r.PullRequest.HtmlUrl,
+                                    Author = r.PullRequest.User.Login,
+                                    Labels = string.Join(";", r.PullRequest.Labels.Select(l => l.Name))
+                                },
                                 TableUpdateMode.Replace);
 
                             await commentTable.UpsertEntityAsync(new PRComment(r), TableUpdateMode.Replace);

@@ -47,10 +47,18 @@ namespace GitHubNotifications.Models
         public string Url { get; set; }
         public string Title { get; set; }
         public string Author { get; set; }
+        public string Labels { get; set; }
     }
 
-
-
+    public class UserEntity : ITableEntity
+    {
+        public string PartitionKey { get; set; }
+        public string RowKey { get; set; }
+        public DateTimeOffset? Timestamp { get; set; }
+        public ETag ETag { get; set; }
+        public bool MyPrsOnly { get; set; }
+        public string Labels { get; set; }
+    }
     public class Owner
     {
         [JsonPropertyName("login")]

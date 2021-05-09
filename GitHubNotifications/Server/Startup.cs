@@ -1,10 +1,3 @@
-using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Builder;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using System;
 using System.Linq;
 using System.Net.Http;
@@ -13,15 +6,24 @@ using System.Security.Claims;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Azure.Data.Tables;
 using Azure.Identity;
 using Azure.Messaging.EventHubs;
 using Azure.Storage.Blobs;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OAuth;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.Extensions.Azure;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
+using Microsoft.Net.Http.Headers;
 
 namespace GitHubNotifications.Server
 {
@@ -48,7 +50,8 @@ namespace GitHubNotifications.Server
                     builder.AddBlobServiceClient(Configuration["ConnectionStrings:storageconnection:blob"], true);
                     builder.AddTableServiceClient(Configuration["ConnectionStrings:storageconnection"]);
                 });
-            //var tableConnString = new TableConnectionString(Configuration["ConnectionStrings:storageconnection"]);
+            var tableCred = new TableSharedKeyCredential(Configuration["ConnectionStrings:storageaccount"], Configuration["ConnectionStrings:storagekey"]);
+            services.AddSingleton(tableCred);
             var cred = new ChainedTokenCredential(new ManagedIdentityCredential(), new VisualStudioCredential());
             string containerUri = Configuration["ConnectionStrings:storageconnection:blob"] + "checkpoint";
             var containerClient = new BlobContainerClient(new Uri(containerUri), cred);
@@ -167,6 +170,11 @@ namespace GitHubNotifications.Server
             services.AddSingleton<IConfigureOptions<AuthorizationOptions>, ConfigureOrganizationPolicy>();
             services.AddSingleton<IAuthorizationHandler, OrganizationRequirementHandler>();
             services.AddHostedService<EventHubProcessor>();
+            // services.AddCors(options => {
+            //     options.AddPolicy("storage", policy => {
+            //         policy.AllowAnyOrigin();
+            //     });
+            // });
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.

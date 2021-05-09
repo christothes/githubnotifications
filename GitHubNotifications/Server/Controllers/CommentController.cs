@@ -1,6 +1,4 @@
 using System;
-using System.Net;
-using System.Threading.Tasks;
 using Azure.Data.Tables;
 using Azure.Data.Tables.Sas;
 using Microsoft.AspNetCore.Authorization;
@@ -16,18 +14,20 @@ namespace GitHubNotifications.Server
     {
         private readonly ILogger<CommentController> _logger;
         private readonly TableServiceClient tableService;
+        private readonly TableSharedKeyCredential cred;
 
-        public CommentController(ILogger<CommentController> logger, TableServiceClient tableService)
+        public CommentController(ILogger<CommentController> logger, TableServiceClient tableService, TableSharedKeyCredential cred)
         {
             this._logger = logger;
             this.tableService = tableService;
+            this.cred = cred;
         }
 
         [HttpGet]
-        public async Task<string> GetSas()
+        public string GetSasUrl()
         {
             var sasBuilder = new TableSasBuilder("comments", TableSasPermissions.Read, DateTime.Now.AddDays(1));
-            return sasBuilder.Sign(null);
+            return $"https://{cred.AccountName}.table.core.windows.net?{sasBuilder.Sign(cred)}";
         }
     }
 }

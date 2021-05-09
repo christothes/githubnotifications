@@ -67,7 +67,7 @@ namespace GitHubNotifications.Client
             try
             {
                 _logger.LogInformation(_client.BaseAddress.ToString());
-                user = await _client.GetFromJsonAsync<UserInfo>("/user");
+                user = await _client.GetFromJsonAsync<UserInfo>("/user/GetCurrentUser");
             }
             catch (Exception exc)
             {

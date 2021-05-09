@@ -24,6 +24,8 @@ namespace GitHubNotifications.Client
             builder.Services.AddTransient(sp => sp.GetRequiredService<IHttpClientFactory>().CreateClient("default"));
             builder.RootComponents.Add<App>("app");
 
+           
+
             await builder.Build().RunAsync();
         }
     }

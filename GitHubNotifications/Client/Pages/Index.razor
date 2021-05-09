@@ -2,7 +2,7 @@
 @inject IJSRuntime JS;
 @inject NavigationManager NavigationManager
 @inject HostAuthenticationStateProvider AuthStateProvider
-@using GitHubNotifications.Shared
+@inject HttpClient Http
 @using Microsoft.AspNetCore.SignalR.Client
 
 <AuthorizeView>
@@ -80,12 +80,12 @@
     private HubConnection hubConnection;
     private List<string> checks = new(30);
     //private List<Comment> comments = new();
-    private Dictionary<string, Comment> commentLookup = new();
-    private string userInput = "my input";
-    private string messageInput = "test input";
-
+    private Dictionary<string, ClientComment> commentLookup = new();
+    private TableClient tableClient = null;
     protected override async Task OnInitializedAsync()
     {
+        
+
         permission = await GetPermissionState();
         if (permission != "granted")
         {
@@ -104,27 +104,9 @@
             CreateNotifcationAsync(updated, id, title, message, url).GetAwaiter().GetResult();
         });
 
-        hubConnection.On<Comment>("NewComment", (comment) =>
+        hubConnection.On<ClientComment>("NewComment", (comment) =>
         {
-            if (null == comment.parent)
-            {
-                commentLookup[comment.id] = comment;
-            }
-            else
-            {
-                if (commentLookup.TryGetValue(comment.parent.id, out var parent))
-                {
-                    parent.replies ??= new List<Comment>();
-                    parent.replies.Add(comment);
-                    parent.sortDate = comment.created;
-                }
-                else
-                {
-                    commentLookup[comment.parent.id] = comment.parent;
-                    comment.parent.replies = new List<Comment>{comment};
-                }
-            }
-
+            AddComment(comment);
             StateHasChanged();
             CreateNotifcationAsync(comment.created,comment.id,comment.title, $"@{comment.author}: {comment.body}",comment.uri).GetAwaiter().GetResult();
         });
@@ -133,6 +115,53 @@
         if (!IsConnected && AuthState.User.Claims.Any())
         {
             await Connect();
+        }
+
+        var stringResult = await Http.GetStringAsync("Comment/GetSasUrl");
+        var url = new Uri(stringResult);
+        tableClient = new TableClient(url, new AzureSasCredential(url.Query));
+        await LoadComments();
+    }
+
+    async Task LoadComments()
+    {
+        var ago = DateTime.UtcNow.AddDays(-3);
+        await foreach (PRComment comment in tableClient.QueryAsync<PRComment>(c => c.Created >= ago))
+        {
+            AddComment(new ClientComment{ 
+                author = comment.Author,
+                body = comment.Body,
+                created = comment.Created,
+                id = comment.RowKey,
+                replyToId = comment.ParentId,
+                title = comment.PrTitle,
+                uri = comment.Uri });
+        }
+        StateHasChanged();
+    }
+
+    void AddComment(ClientComment comment)
+    {
+        if (null == comment.replyToId || "0" == comment.replyToId )
+        {
+            commentLookup[comment.id] = comment;
+        }
+        else
+        {
+            if (commentLookup.TryGetValue(comment.replyToId, out var parent))
+            {
+                parent.replies ??= new List<ClientComment>();
+                parent.replies.Add(comment);
+                 if (comment.created > parent.sortDate)
+                 {
+                    parent.sortDate =comment.created;
+                 }
+            }
+            else if (comment.parent != null)
+            {
+                commentLookup[comment.replyToId] = comment.parent;
+                comment.parent.replies = new List<ClientComment>{comment};
+            }
         }
     }
 
