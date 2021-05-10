@@ -30,6 +30,14 @@ a, .btn-link {
     color: red;
 }
 
+code {
+    white-space: pre-wrap;
+}
+
+p {
+    margin-bottom: 0px;
+}
+
 #blazor-error-ui {
     background: lightyellow;
     bottom: 0;

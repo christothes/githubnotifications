@@ -8,7 +8,6 @@
 <AuthorizeView>
     <Authorized>
         Notifications: @permission, Hub connected: @IsConnected
-
         <h2>Comments</h2>
             <div id="commentList" class="list-group" style="overflow-wrap: anywhere;">
                 @foreach (var comment in commentLookup.Values.OrderByDescending(c => c.created))
@@ -83,9 +82,7 @@
     private Dictionary<string, ClientComment> commentLookup = new();
     private TableClient tableClient = null;
     protected override async Task OnInitializedAsync()
-    {
-        
-
+    {       
         permission = await GetPermissionState();
         if (permission != "granted")
         {

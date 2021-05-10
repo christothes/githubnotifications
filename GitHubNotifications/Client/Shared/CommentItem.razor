@@ -1,7 +1,7 @@
 ﻿<div class="list-group-item">
     <div>
-        <a href="@Comment.uri">@Comment.title</a><br />
-        <strong>@at@Comment.author</strong> -
+        <strong><a href="@Comment.uri">@Comment.title</a><br />
+        @at@Comment.author</strong> -
         @if (@Comment.created.Day == DateTime.Now.Day)
         {
             @Comment.created.ToString("h:mm tt")
@@ -11,7 +11,7 @@
             @Comment.created.ToString("M/dd h:mm tt")
         }
     </div>
-    &nbsp;@FromMarkdown(Comment.body)
+    @FromMarkdown(Comment.body)
     @if (Comment.replies?.Count > 0)
     {
         <div class="list-group" style="max-width: inherit; overflow-wrap: anywhere;">
@@ -29,7 +29,7 @@
                             @reply.created.ToString("M/dd h:mm tt")
                         }
                     </div>
-                    &nbsp;@FromMarkdown(reply.body)
+                    @FromMarkdown(reply.body)
                 </div>
             }
         </div>
