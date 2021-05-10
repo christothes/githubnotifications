@@ -82,8 +82,8 @@ namespace GitHubNotifications.Server
                 .AddCookie(
                     options =>
                     {
-                        options.LoginPath = "/authorization/login";
-                        options.AccessDeniedPath = "/Unauthorized";
+                        options.LoginPath = "/";
+                        options.AccessDeniedPath = "/";
                     })
                 .AddOAuth(
                     "GitHub",

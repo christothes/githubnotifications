@@ -8,20 +8,24 @@
 <AuthorizeView>
     <Authorized>
         Notifications: @permission, Hub connected: @IsConnected
-        <h2>Comments</h2>
+        <div style="height: 75%;">
+            <h2>Comments</h2>
             <div id="commentList" class="list-group" style="overflow-wrap: anywhere;">
                 @foreach (var comment in commentLookup.Values.OrderByDescending(c => c.created))
                 {
                     <CommentItem Comment="@comment"></CommentItem>
                 }
             </div>
-        <h2>Check Failures</h2>
-        <ul id="messagesList">
-            @foreach (var message in checks)
-            {
-                <li>@message</li>
-            }
-        </ul>
+        </div>
+        <div>
+            <h2>Check Failures</h2>
+            <ul id="messagesList">
+                @foreach (var message in checks)
+                {
+                    <li>@message</li>
+                }
+            </ul>
+        </div>
     </Authorized>
     <NotAuthorized>
         <a href="auth/signin">Log in</a>
@@ -58,7 +62,7 @@
 
     private async Task CreateNotifcationAsync(DateTime updated, string id, string title, string body, string url)
     {
-        @* var options = new
+        var options = new
         {
             Body = body,
             Icon = icon,
@@ -73,7 +77,7 @@
             notif = await JS.InvokeAsync<object>("createNotification", title, options);
         }
         catch (Exception)
-        { } *@
+        { }
     }
 
     private HubConnection hubConnection;
@@ -114,15 +118,18 @@
             await Connect();
         }
 
-        var stringResult = await Http.GetStringAsync("Comment/GetSasUrl");
-        var url = new Uri(stringResult);
-        tableClient = new TableClient(url, new AzureSasCredential(url.Query), null);
-        await LoadComments();
+        try
+        {
+            var stringResult = await Http.GetStringAsync("Comment/GetSasUrl");
+            var url = new Uri(stringResult);
+            tableClient = new TableClient(url, new AzureSasCredential(url.Query), null);
+            await LoadComments();
+        } catch {}
     }
 
     async Task LoadComments()
     {
-        var ago = DateTime.UtcNow.AddDays(-3);
+        var ago = DateTime.UtcNow.AddDays(-1);
         await foreach (PRComment comment in tableClient.QueryAsync<PRComment>(c => c.Created >= ago))
         {
             AddComment(new ClientComment{ 
