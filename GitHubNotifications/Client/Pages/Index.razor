@@ -128,7 +128,7 @@
 
     async Task LoadComments()
     {
-        var ago = DateTime.UtcNow.AddDays(-1);
+        var ago = DateTime.UtcNow.AddDays(-2);
         await foreach (PRComment comment in tableClient.QueryAsync<PRComment>(c => c.Created >= ago))
         {
             await AddComment(new ClientComment { 
