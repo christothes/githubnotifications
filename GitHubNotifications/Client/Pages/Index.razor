@@ -7,7 +7,10 @@
 
 <AuthorizeView>
     <Authorized>
-        Notifications: @permission, Hub connected: @IsConnected
+        <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" @bind="OnlyMyPRs" disabled="@true" id="flexSwitchCheckDefault">
+            <label class="form-check-label" for="flexSwitchCheckDefault">Show only my PRs</label>
+        </div>
         <div style="height: 75%;">
             <h2>Comments</h2>
             <div id="commentList" class="list-group" style="overflow-wrap: anywhere;">
@@ -37,6 +40,12 @@
     private string permission;
     private string icon = "images/github.png";
     private object notif;
+    private HubConnection hubConnection;
+    private List<string> checks = new(30);
+    private Dictionary<string, ClientComment> commentLookup = new();
+    private TableClient tableClient = null;
+    private UserOptions userOptions = null;
+    private bool OnlyMyPRs = false;
 
     private async Task RequestPermission()
     {
@@ -79,11 +88,7 @@
         catch (Exception)
         { }
     }
-
-    private HubConnection hubConnection;
-    private List<string> checks = new(30);
-    private Dictionary<string, ClientComment> commentLookup = new();
-    private TableClient tableClient = null;
+    
     protected override async Task OnInitializedAsync()
     {       
         var AuthState = await AuthStateProvider.GetAuthenticationStateAsync();
@@ -99,7 +104,7 @@
 
         hubConnection.On<DateTime, string, string, string, string, string>("CheckStatus", (updated, id, title, message, url, author) =>
         {
-            if (author == AuthState.User.Claims.SingleOrDefault(c =>c.Type == ClaimConstants.Login)?.Value)
+            if (author == AuthState.User.GetGitHubLogin())
             {
                 var encodedMsg = $"{title}: {message}";
                 checks.Add(encodedMsg);
@@ -124,17 +129,26 @@
         try
         {
             var stringResult = await Http.GetStringAsync("Comment/GetSasUrl");
+            userOptions = await Http.GetFromJsonAsync<UserOptions>("User/GetOptions");
+            OnlyMyPRs = userOptions?.OnlyMyPRs ?? false;
+            StateHasChanged();
             var url = new Uri(stringResult);
             tableClient = new TableClient(url, new AzureSasCredential(url.Query), null);
-            await LoadComments();
+            await LoadComments(AuthState.User.GetGitHubLogin());
+
         } catch {}
     }
 
-    async Task LoadComments()
+    async Task LoadComments(string user)
     {
-        var ago = DateTime.UtcNow.AddDays(-2);
         var comments = new List<ClientComment>();
-        await foreach (PRComment comment in tableClient.QueryAsync<PRComment>(c => c.Created >= ago))
+        var ago = DateTime.UtcNow.AddDays(-2);
+        Expression<Func<PRComment, bool>> filter = c => c.Created >= ago;
+        if (userOptions?.OnlyMyPRs ?? false)
+        {
+            filter = c => c.Created >= ago && c.PartitionKey == user;
+        }
+        await foreach (PRComment comment in tableClient.QueryAsync<PRComment>(filter))
         {
             var cc = new ClientComment { 
                 author = comment.Author,

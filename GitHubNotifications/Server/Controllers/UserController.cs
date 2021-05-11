@@ -6,8 +6,11 @@ using System.Linq;
 using System.Security.Claims;
 using GitHubNotifications.Shared;
 using Microsoft.Extensions.Logging;
-using System.Text.Json;
 using Azure.Data.Tables;
+using GitHubNotifications.Models;
+using System.Threading.Tasks;
+using Azure;
+using System.Net;
 
 namespace WebApplication1.Server.Controllers
 {
@@ -16,18 +19,48 @@ namespace WebApplication1.Server.Controllers
     public class UserController : ControllerBase
     {
         private readonly ILogger<UserController> _logger;
-        private readonly TableServiceClient tableService;
+        private readonly TableClient userTable;
 
         public UserController(ILogger<UserController> logger, TableServiceClient tableService)
         {
             this._logger = logger;
-            this.tableService = tableService;
+            this.userTable = tableService.GetTableClient("users");
         }
+
         [HttpGet]
         [AllowAnonymous]
         public IActionResult GetCurrentUser()
         {
             return Ok(User.Identity.IsAuthenticated ? CreateUserInfo(User) : UserInfo.Anonymous);
+        }
+
+        [HttpGet]
+        [Authorize]
+        public async Task<IActionResult> GetOptions()
+        {
+            var login = User.GetGitHubLogin();
+            UserOptions options = null;
+
+            try
+            {
+                options = await userTable.GetEntityAsync<UserOptions>(login, login);
+
+            }
+            catch (RequestFailedException ex)
+            {
+                if (ex.Status == (int)HttpStatusCode.NotFound)
+                {
+                    options = new UserOptions { PartitionKey = login, RowKey = login, OnlyMyPRs = true, Labels = "" };
+                }
+            }
+
+            // write the user back to the table to update the TimeStamp
+            if (options != null)
+            {
+                await userTable.UpsertEntityAsync(options);
+            }
+
+            return Ok(options);
         }
 
         private UserInfo CreateUserInfo(ClaimsPrincipal claimsPrincipal)
