@@ -82,7 +82,6 @@
 
     private HubConnection hubConnection;
     private List<string> checks = new(30);
-    //private List<Comment> comments = new();
     private Dictionary<string, ClientComment> commentLookup = new();
     private TableClient tableClient = null;
     protected override async Task OnInitializedAsync()
@@ -105,9 +104,9 @@
             CreateNotifcationAsync(updated, id, title, message, url).GetAwaiter().GetResult();
         });
 
-        hubConnection.On<ClientComment>("NewComment", (comment) =>
+        hubConnection.On<ClientComment>("NewComment", async (comment) =>
         {
-            AddComment(comment);
+            await AddComment(comment);
             StateHasChanged();
             CreateNotifcationAsync(comment.created,comment.id,comment.title, $"@{comment.author}: {comment.body}",comment.uri).GetAwaiter().GetResult();
         });
@@ -132,27 +131,28 @@
         var ago = DateTime.UtcNow.AddDays(-1);
         await foreach (PRComment comment in tableClient.QueryAsync<PRComment>(c => c.Created >= ago))
         {
-            AddComment(new ClientComment{ 
+            await AddComment(new ClientComment { 
                 author = comment.Author,
                 body = comment.Body,
                 created = comment.Created,
                 id = comment.RowKey,
-                replyToId = comment.ParentId,
+                parentId = comment.ParentId,
                 title = comment.PrTitle,
                 uri = comment.Uri });
         }
         StateHasChanged();
     }
 
-    void AddComment(ClientComment comment)
+    async Task AddComment(ClientComment comment)
     {
-        if (null == comment.replyToId || "0" == comment.replyToId )
+        comment.created = comment.created.ToLocalTime();
+        if (null == comment.parentId || "0" == comment.parentId )
         {
             commentLookup[comment.id] = comment;
         }
         else
         {
-            if (commentLookup.TryGetValue(comment.replyToId, out var parent))
+            if (commentLookup.TryGetValue(comment.parentId, out var parent))
             {
                 parent.replies ??= new List<ClientComment>();
                 parent.replies.Add(comment);
@@ -161,10 +161,20 @@
                     parent.sortDate =comment.created;
                  }
             }
-            else if (comment.parent != null)
+            else 
             {
-                commentLookup[comment.replyToId] = comment.parent;
-                comment.parent.replies = new List<ClientComment>{comment};
+                try
+                {
+                    PRComment parentFromTable = await tableClient.GetEntityAsync<PRComment>(comment.parentAuthor, comment.parentId);
+                    commentLookup[parentFromTable.RowKey] = new ClientComment { 
+                                                    author = parentFromTable.Author,
+                                                    body = parentFromTable.Body,
+                                                    created = parentFromTable.Created,
+                                                    id = parentFromTable.RowKey,                                                    
+                                                    title = parentFromTable.PrTitle,
+                                                    uri = parentFromTable.Uri };
+                } catch {}
+
             }
         }
     }

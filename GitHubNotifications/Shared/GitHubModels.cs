@@ -18,6 +18,7 @@ namespace GitHubNotifications.Models
         public string Uri { get; set; }
         public DateTime Created { get; set; }
         public string ParentId { get; set; }
+        public string ParentAuthor { get; set; }
         public string Author { get; set; }
         public string PrNumber { get; set; }
         public string PrTitle { get; set; }

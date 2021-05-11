@@ -26,11 +26,11 @@ namespace GitHubNotifications.Shared
         [JsonPropertyName("parentId")]
         public string ParentId { get; set; }
 
-        [JsonPropertyName("parent")]
-        public CommentModel Parent { get; set; }
+        [JsonPropertyName("parentAuthor")]
+        public string ParentAuthor { get; set; }
 
 
-        public CommentModel(string id, string user, string uri, DateTime created, string title, string body, CommentModel parent)
+        public CommentModel(string id, string user, string uri, DateTime created, string title, string body, string parentId, string parentAuthor)
         {
             Id = id;
             Author = user;
@@ -38,8 +38,8 @@ namespace GitHubNotifications.Shared
             Created = created;
             Title = title;
             Body = body;
-            Parent = parent;
-            ParentId = parent?.Id;
+            ParentId = parentId;
+            ParentAuthor = parentAuthor;
         }
     }
 }

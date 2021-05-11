@@ -193,27 +193,15 @@ namespace GitHubNotifications
 
             _logger.LogInformation($"{pr.Comment.CreatedAt.ToLocalTime()} PRComment Url: {pr.Comment.HtmlUrl}");
 
-            CommentModel parent = null;
-            if (inReplyTo != null)
-            {
-                parent = new CommentModel(
-                    inReplyTo.RowKey,
-                    inReplyTo.Author,
-                    inReplyTo.Uri,
-                    inReplyTo.Created.ToLocalTime(),
-                    inReplyTo.PrTitle,
-                    inReplyTo.Body,
-                    null);
-            }
-
             var model = new CommentModel(
                 pr.Comment.Id.ToString(),
                 pr.Comment.User.Login,
                 pr.Comment.HtmlUrl,
-                pr.Comment.UpdatedAt.ToLocalTime(),
+                pr.Comment.UpdatedAt,
                 pr.PullRequest.Title,
                 pr.Comment.Body,
-                parent);
+                inReplyTo.RowKey,
+                inReplyTo.Author);
 
             await _hubContext.Clients.All.SendAsync(
                 "NewComment", model);
