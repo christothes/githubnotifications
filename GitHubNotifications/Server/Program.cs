@@ -20,7 +20,7 @@ namespace GitHubNotifications.Server
                     var keyVaultEndpoint = new Uri(Environment.GetEnvironmentVariable("VaultUri"));
                     config.AddAzureKeyVault(
                         keyVaultEndpoint,
-                        new ChainedTokenCredential(new ManagedIdentityCredential(), new VisualStudioCredential()));
+                        new ChainedTokenCredential(new ManagedIdentityCredential(), new VisualStudioCodeCredential()));
                 })
 
                 .ConfigureWebHostDefaults(webBuilder =>

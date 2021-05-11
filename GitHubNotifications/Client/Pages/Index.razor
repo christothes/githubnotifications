@@ -86,6 +86,7 @@
     private TableClient tableClient = null;
     protected override async Task OnInitializedAsync()
     {       
+        var AuthState = await AuthStateProvider.GetAuthenticationStateAsync();
         permission = await GetPermissionState();
         if (permission != "granted")
         {
@@ -96,12 +97,15 @@
         .WithUrl(NavigationManager.ToAbsoluteUri("/notificationshub"))
         .Build();
 
-        hubConnection.On<DateTime, string, string, string, string>("CheckStatus", (updated, id, title, message, url) =>
+        hubConnection.On<DateTime, string, string, string, string, string>("CheckStatus", (updated, id, title, message, url, author) =>
         {
-            var encodedMsg = $"{title}: {message}";
-            checks.Add(encodedMsg);
-            StateHasChanged();
-            CreateNotifcationAsync(updated, id, title, message, url).GetAwaiter().GetResult();
+            if (author == AuthState.User.Claims.SingleOrDefault(c =>c.Type == ClaimConstants.Login)?.Value)
+            {
+                var encodedMsg = $"{title}: {message}";
+                checks.Add(encodedMsg);
+                StateHasChanged();
+                CreateNotifcationAsync(updated, id, title, message, url).GetAwaiter().GetResult();
+            }
         });
 
         hubConnection.On<ClientComment>("NewComment", async (comment) =>
@@ -111,7 +115,7 @@
             CreateNotifcationAsync(comment.created,comment.id,comment.title, $"@{comment.author}: {comment.body}",comment.uri).GetAwaiter().GetResult();
         });
 
-        var AuthState = await AuthStateProvider.GetAuthenticationStateAsync();
+        
         if (!IsConnected && AuthState.User.Claims.Any())
         {
             await Connect();
@@ -161,7 +165,7 @@
     {
         comment.created = comment.created.ToLocalTime();
      
-        if (commentLookup.TryGetValue(comment.parentId, out var parent))
+        if (comment.parentId != "0" && comment.parentId != null && commentLookup.TryGetValue(comment.parentId, out var parent))
         {
             parent.replies ??= new List<ClientComment>();
             parent.replies.Add(comment);
@@ -170,20 +174,6 @@
                 parent.sortDate = comment.created;
             }
         }
-        else 
-        {
-            try
-            {
-                PRComment parentFromTable = await tableClient.GetEntityAsync<PRComment>(comment.parentAuthor, comment.parentId);
-                commentLookup[parentFromTable.RowKey] = new ClientComment { 
-                                                author = parentFromTable.Author,
-                                                body = parentFromTable.Body,
-                                                created = parentFromTable.Created,
-                                                id = parentFromTable.RowKey,                                                    
-                                                title = parentFromTable.PrTitle,
-                                                uri = parentFromTable.Uri };
-            } catch {}
-        }        
     }
 
     async Task Connect() { await hubConnection.StartAsync(); }

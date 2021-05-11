@@ -200,8 +200,8 @@ namespace GitHubNotifications
                 pr.Comment.UpdatedAt,
                 pr.PullRequest.Title,
                 pr.Comment.Body,
-                inReplyTo.RowKey,
-                inReplyTo.Author);
+                inReplyTo?.RowKey,
+                inReplyTo?.Author);
 
             await _hubContext.Clients.All.SendAsync(
                 "NewComment", model);
@@ -235,7 +235,8 @@ namespace GitHubNotifications
                 webhookEvent.CheckSuite.Id.ToString(),
                 subject,
                 plainTextContent,
-                prDetails.Url);
+                prDetails.Url,
+                prDetails.Author);
         }
     }
 

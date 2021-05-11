@@ -53,7 +53,7 @@ namespace GitHubNotifications.Server
                 });
             var tableCred = new TableSharedKeyCredential(Configuration["ConnectionStrings:storageaccount"], Configuration["ConnectionStrings:storagekey"]);
             services.AddSingleton(tableCred);
-            var cred = new ChainedTokenCredential(new ManagedIdentityCredential(), new VisualStudioCredential());
+            var cred = new ChainedTokenCredential(new ManagedIdentityCredential(), new VisualStudioCodeCredential());
             string containerUri = Configuration["ConnectionStrings:storageconnection:blob"] + "checkpoint";
             var containerClient = new BlobContainerClient(new Uri(containerUri), cred);
             containerClient.CreateIfNotExists();
