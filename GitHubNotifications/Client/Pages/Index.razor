@@ -153,12 +153,13 @@
             var cc = new ClientComment { 
                 author = comment.Author,
                 body = comment.Body,
-                created = comment.Created,
+                created = comment.Created.ToLocalTime(),
                 id = comment.RowKey,
                 parentId = comment.ParentId,
                 parentAuthor = comment.ParentAuthor,
                 title = comment.PrTitle,
-                uri = comment.Uri };
+                uri = comment.Uri,
+                sortDate = comment.Created.ToLocalTime()};
 
             comments.Add(cc);
 
