@@ -11,7 +11,7 @@
         <div style="height: 75%;">
             <h2>Comments</h2>
             <div id="commentList" class="list-group" style="overflow-wrap: anywhere;">
-                @foreach (var comment in commentLookup.Values.OrderByDescending(c => c.created))
+                @foreach (var comment in commentLookup.Values.OrderByDescending(c => c.sortDate))
                 {
                     <CommentItem Comment="@comment"></CommentItem>
                 }
@@ -129,16 +129,30 @@
     async Task LoadComments()
     {
         var ago = DateTime.UtcNow.AddDays(-2);
+        var comments = new List<ClientComment>();
         await foreach (PRComment comment in tableClient.QueryAsync<PRComment>(c => c.Created >= ago))
         {
-            await AddComment(new ClientComment { 
+            var cc = new ClientComment { 
                 author = comment.Author,
                 body = comment.Body,
                 created = comment.Created,
                 id = comment.RowKey,
                 parentId = comment.ParentId,
+                parentAuthor = comment.ParentAuthor,
                 title = comment.PrTitle,
-                uri = comment.Uri });
+                uri = comment.Uri };
+
+            comments.Add(cc);
+
+            if (null == cc.parentId || "0" == cc.parentId )
+            {
+                commentLookup[cc.id] = cc;
+            }
+        }
+
+        foreach(var comment in comments)
+        {
+            await AddComment(comment);
         }
         StateHasChanged();
     }
@@ -146,37 +160,30 @@
     async Task AddComment(ClientComment comment)
     {
         comment.created = comment.created.ToLocalTime();
-        if (null == comment.parentId || "0" == comment.parentId )
+     
+        if (commentLookup.TryGetValue(comment.parentId, out var parent))
         {
-            commentLookup[comment.id] = comment;
-        }
-        else
-        {
-            if (commentLookup.TryGetValue(comment.parentId, out var parent))
+            parent.replies ??= new List<ClientComment>();
+            parent.replies.Add(comment);
+            if (comment.created > parent.sortDate)
             {
-                parent.replies ??= new List<ClientComment>();
-                parent.replies.Add(comment);
-                 if (comment.created > parent.sortDate)
-                 {
-                    parent.sortDate =comment.created;
-                 }
-            }
-            else 
-            {
-                try
-                {
-                    PRComment parentFromTable = await tableClient.GetEntityAsync<PRComment>(comment.parentAuthor, comment.parentId);
-                    commentLookup[parentFromTable.RowKey] = new ClientComment { 
-                                                    author = parentFromTable.Author,
-                                                    body = parentFromTable.Body,
-                                                    created = parentFromTable.Created,
-                                                    id = parentFromTable.RowKey,                                                    
-                                                    title = parentFromTable.PrTitle,
-                                                    uri = parentFromTable.Uri };
-                } catch {}
-
+                parent.sortDate = comment.created;
             }
         }
+        else 
+        {
+            try
+            {
+                PRComment parentFromTable = await tableClient.GetEntityAsync<PRComment>(comment.parentAuthor, comment.parentId);
+                commentLookup[parentFromTable.RowKey] = new ClientComment { 
+                                                author = parentFromTable.Author,
+                                                body = parentFromTable.Body,
+                                                created = parentFromTable.Created,
+                                                id = parentFromTable.RowKey,                                                    
+                                                title = parentFromTable.PrTitle,
+                                                uri = parentFromTable.Uri };
+            } catch {}
+        }        
     }
 
     async Task Connect() { await hubConnection.StartAsync(); }
