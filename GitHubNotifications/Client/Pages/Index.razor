@@ -12,17 +12,8 @@
             <input type="checkbox" id="prOption" class="custom-control-input" @bind="OnlyMyPRs" disabled>
             <label class="custom-control-label" for="prOption">Show only my PRs</label>
         </div>
-        <div style="height: 75%;">
-            <h2>Comments</h2>
-            <div id="commentList" class="list-group" style="overflow-wrap: anywhere;">
-                @foreach (var comment in commentLookup.Values.OrderByDescending(c => c.sortDate))
-                {
-                    <CommentItem Comment="@comment"></CommentItem>
-                }
-            </div>
-        </div>
-        <div>
-            <h2>Check Failures</h2>
+         <div>
+            <h3>Check Failures</h3>
             <ul id="messagesList">
                 @foreach (var message in checks)
                 {
@@ -30,6 +21,16 @@
                 }
             </ul>
         </div>
+        <div>
+            <h3>Comments</h3>
+            <div id="commentList" class="list-group" style="overflow-wrap: anywhere;">
+                @foreach (var comment in commentLookup.Values.OrderByDescending(c => c.sortDate))
+                {
+                    <CommentItem Comment="@comment"></CommentItem>
+                }
+            </div>
+        </div>
+       
     </Authorized>
     <NotAuthorized>
         Please Log in.
@@ -106,16 +107,18 @@
 
         hubConnection = new HubConnectionBuilder()
         .WithUrl(NavigationManager.ToAbsoluteUri("/notificationshub"))
+        .WithAutomaticReconnect()
         .Build();
 
         hubConnection.On<DateTime, string, string, string, string, string>("CheckStatus", (updated, id, title, message, url, author) =>
         {
+            Console.WriteLine($"Check failure for {title}");
             if (author == AuthState.User.GetGitHubLogin())
             {
-                var encodedMsg = $"{title}: {message}";
+                var encodedMsg = $"{updated.ToLocalTime().ToString("h:mm tt")}: {title}";
                 checks.Add(encodedMsg);
                 StateHasChanged();
-                CreateNotifcationAsync(updated, id, title, message, url).GetAwaiter().GetResult();
+                CreateNotifcationAsync(updated.ToLocalTime(), id, title, message, url).GetAwaiter().GetResult();
             }
         });
 
