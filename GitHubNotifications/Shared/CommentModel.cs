@@ -29,6 +29,9 @@ namespace GitHubNotifications.Shared
         [JsonPropertyName("parentAuthor")]
         public string ParentAuthor { get; set; }
 
+        [JsonPropertyName("prAuthor")]
+        public string PrAuthor { get; set; }
+
 
         public CommentModel(string id, string user, string uri, DateTime created, string title, string body, string parentId, string parentAuthor)
         {

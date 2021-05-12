@@ -10,9 +10,10 @@ namespace GitHubNotifications.Client
         public string uri { get; set; }
         public DateTime created { get; set; }
         public string title { get; set; }
-        public string body { get; set; }
+        public string body { get; set; }    
         public string parentId { get; set; }
         public string parentAuthor { get; set; }
+        public string prAuthor { get; set; }
         public List<ClientComment> replies { get; set; }
         public DateTime sortDate { get; set; }
     }

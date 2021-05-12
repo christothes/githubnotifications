@@ -7,9 +7,10 @@
 
 <AuthorizeView>
     <Authorized>
-        <div class="form-check form-switch">
-            <input class="form-check-input" type="checkbox" @bind="OnlyMyPRs" disabled="@true" id="flexSwitchCheckDefault">
-            <label class="form-check-label" for="flexSwitchCheckDefault">Show only my PRs</label>
+        @* <button @onclick="TestComment">Test Comment</button> *@
+        <div class="custom-control custom-switch">
+            <input type="checkbox" id="prOption" class="custom-control-input" @bind="OnlyMyPRs" disabled>
+            <label class="custom-control-label" for="prOption">Show only my PRs</label>
         </div>
         <div style="height: 75%;">
             <h2>Comments</h2>
@@ -69,6 +70,11 @@
         StateHasChanged();
     }
 
+    private async Task TestComment()
+    {
+        await Http.GetAsync("Comment/TestComment");
+    }
+
     private async Task CreateNotifcationAsync(DateTime updated, string id, string title, string body, string url)
     {
         var options = new
@@ -115,6 +121,10 @@
 
         hubConnection.On<ClientComment>("NewComment", async (comment) =>
         {
+            if (null == comment.parentId || "0" == comment.parentId )
+            {
+                commentLookup[comment.id] = comment;
+            }
             await AddComment(comment);
             StateHasChanged();
             CreateNotifcationAsync(comment.created,comment.id,comment.title, $"@{comment.author}: {comment.body}",comment.uri).GetAwaiter().GetResult();
@@ -151,6 +161,7 @@
         await foreach (PRComment comment in tableClient.QueryAsync<PRComment>(filter))
         {
             var cc = new ClientComment { 
+                prAuthor = comment.PartitionKey,
                 author = comment.Author,
                 body = comment.Body,
                 created = comment.Created.ToLocalTime(),
@@ -178,8 +189,8 @@
 
     async Task AddComment(ClientComment comment)
     {
-        comment.created = comment.created.ToLocalTime();
-     
+        comment.sortDate = comment.created.ToLocalTime();
+        comment.created = comment.sortDate;
         if (comment.parentId != "0" && comment.parentId != null && commentLookup.TryGetValue(comment.parentId, out var parent))
         {
             parent.replies ??= new List<ClientComment>();

@@ -51,6 +51,20 @@ namespace GitHubNotifications
             {
                 await DoWork(args);
             };
+        #if DEBUG
+            var model = new CommentModel(
+                "1234",
+                "pr.Comment.User.Login",
+                "pr.Comment.HtmlUrl",
+                DateTime.Now,
+                "pr.PullRequest.Title",
+                "pr.Comment.Body",
+                "inReplyTo?.RowKey",
+                "inReplyTo?.Author");
+
+             _hubContext.Clients.All.SendAsync(
+                "NewComment", model).GetAwaiter().GetResult();
+        #endif
         }
 
         public async Task StartAsync(CancellationToken stoppingToken)
