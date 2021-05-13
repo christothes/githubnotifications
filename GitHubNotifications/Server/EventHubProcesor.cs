@@ -51,20 +51,6 @@ namespace GitHubNotifications
             {
                 await DoWork(args);
             };
-        #if DEBUG
-            var model = new CommentModel(
-                "1234",
-                "pr.Comment.User.Login",
-                "pr.Comment.HtmlUrl",
-                DateTime.Now,
-                "pr.PullRequest.Title",
-                "pr.Comment.Body",
-                "inReplyTo?.RowKey",
-                "inReplyTo?.Author");
-
-             _hubContext.Clients.All.SendAsync(
-                "NewComment", model).GetAwaiter().GetResult();
-        #endif
         }
 
         public async Task StartAsync(CancellationToken stoppingToken)
@@ -118,6 +104,7 @@ namespace GitHubNotifications
                             "check_suite" => typeof(CheckSuiteEvent),
                             "pull_request" => typeof(PullRequestEvent),
                             "pull_request_review_comment" => typeof(PullRequestReviewEvent),
+                            "issue_comment" => typeof(IssueEvent),
                             _ => null,
                         };
                         if (webhookType == null)
@@ -177,7 +164,12 @@ namespace GitHubNotifications
                                 TableUpdateMode.Replace);
 
                             await commentTable.UpsertEntityAsync(new PRComment(r), TableUpdateMode.Replace);
-                            await SendPrCommentMail(r, commentTable);
+                            await SendPrCommentMail(r.Comment, r.PullRequest.User.Login, r.PullRequest.Title, commentTable);
+                        }
+                        if (webhookObj is IssueEvent i)
+                        {
+                            await commentTable.UpsertEntityAsync(new PRComment(i), TableUpdateMode.Replace);
+                            await SendPrCommentMail(i.Comment, i.Issue.User.Login, i.Issue.Title, commentTable); 
                         }
                     }
                 }
@@ -190,30 +182,30 @@ namespace GitHubNotifications
             }
         }
 
-        public async Task SendPrCommentMail(PullRequestReviewEvent pr, TableClient table)
+        public async Task SendPrCommentMail(Comment comment, string prAuthor, string prTitle, TableClient table)
         {
             PRComment inReplyTo = null;
-            if (pr.Comment.InReplyToId > 0)
+            if (comment.InReplyToId > 0)
             {
                 try
                 {
-                    inReplyTo = await table.GetEntityAsync<PRComment>(pr.PullRequest.User.Login, pr.Comment.InReplyToId.ToString());
+                    inReplyTo = await table.GetEntityAsync<PRComment>(prAuthor, comment.InReplyToId.ToString());
                 }
                 catch
                 {
-                    _logger.LogWarning($"\t*Found no reply for {pr.Comment.HtmlUrl}");
+                    _logger.LogWarning($"\t*Found no reply for {comment.HtmlUrl}");
                 }
             }
 
-            _logger.LogInformation($"{pr.Comment.CreatedAt.ToLocalTime()} PRComment Url: {pr.Comment.HtmlUrl}");
+            _logger.LogInformation($"{comment.CreatedAt.ToLocalTime()} PRComment Url: {comment.HtmlUrl}");
 
             var model = new CommentModel(
-                pr.Comment.Id.ToString(),
-                pr.Comment.User.Login,
-                pr.Comment.HtmlUrl,
-                pr.Comment.UpdatedAt,
-                pr.PullRequest.Title,
-                pr.Comment.Body,
+                comment.Id.ToString(),
+                comment.User.Login,
+                comment.HtmlUrl,
+                comment.UpdatedAt,
+                prTitle,
+                comment.Body,
                 inReplyTo?.RowKey,
                 inReplyTo?.Author);
 

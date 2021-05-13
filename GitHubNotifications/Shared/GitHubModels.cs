@@ -37,6 +37,19 @@ namespace GitHubNotifications.Models
             PrNumber = pr.PullRequest.Number.ToString();
             PrTitle = pr.PullRequest.Title;
         }
+
+        public PRComment(IssueEvent i)
+        {
+            PartitionKey = i.Issue.User.Login;
+            RowKey = i.Comment.Id.ToString();
+            Body = i.Comment.Body;
+            Uri = i.Comment.HtmlUrl;
+            Created = i.Comment.CreatedAt;
+            ParentId = i.Comment.InReplyToId.ToString();
+            Author = i.Comment.User.Login;
+            PrNumber = i.Issue.PullRequest.Url.Substring(i.Issue.Url.LastIndexOf('/') + 1);
+            PrTitle = i.Issue.Title;
+        }
     }
 
     public class PREntity : ITableEntity
@@ -819,7 +832,7 @@ namespace GitHubNotifications.Models
         public string Href { get; set; }
     }
 
-    public class Issue
+    public class LinksIssue
     {
         [JsonPropertyName("href")]
         public string Href { get; set; }
@@ -864,7 +877,7 @@ namespace GitHubNotifications.Models
         public Html Html { get; set; }
 
         [JsonPropertyName("issue")]
-        public Issue Issue { get; set; }
+        public LinksIssue Issue { get; set; }
 
         [JsonPropertyName("comments")]
         public Comments Comments { get; set; }
@@ -1182,5 +1195,121 @@ namespace GitHubNotifications.Models
         [JsonPropertyName("sender")]
         public Sender Sender { get; set; }
     }
+
+    public class Issue
+    {
+        [JsonPropertyName("url")]
+        public string Url { get; set; }
+
+        [JsonPropertyName("repository_url")]
+        public string RepositoryUrl { get; set; }
+
+        [JsonPropertyName("labels_url")]
+        public string LabelsUrl { get; set; }
+
+        [JsonPropertyName("comments_url")]
+        public string CommentsUrl { get; set; }
+
+        [JsonPropertyName("events_url")]
+        public string EventsUrl { get; set; }
+
+        [JsonPropertyName("html_url")]
+        public string HtmlUrl { get; set; }
+
+        [JsonPropertyName("id")]
+        public int Id { get; set; }
+
+        [JsonPropertyName("node_id")]
+        public string NodeId { get; set; }
+
+        [JsonPropertyName("number")]
+        public int Number { get; set; }
+
+        [JsonPropertyName("title")]
+        public string Title { get; set; }
+
+        [JsonPropertyName("user")]
+        public User User { get; set; }
+
+        [JsonPropertyName("labels")]
+        public List<object> Labels { get; set; }
+
+        [JsonPropertyName("state")]
+        public string State { get; set; }
+
+        [JsonPropertyName("locked")]
+        public bool Locked { get; set; }
+
+        [JsonPropertyName("assignee")]
+        public object Assignee { get; set; }
+
+        [JsonPropertyName("assignees")]
+        public List<object> Assignees { get; set; }
+
+        [JsonPropertyName("milestone")]
+        public object Milestone { get; set; }
+
+        [JsonPropertyName("comments")]
+        public int Comments { get; set; }
+
+        [JsonPropertyName("created_at")]
+        public DateTime CreatedAt { get; set; }
+
+        [JsonPropertyName("updated_at")]
+        public DateTime UpdatedAt { get; set; }
+
+        [JsonPropertyName("closed_at")]
+        public object ClosedAt { get; set; }
+
+        [JsonPropertyName("author_association")]
+        public string AuthorAssociation { get; set; }
+
+        [JsonPropertyName("active_lock_reason")]
+        public object ActiveLockReason { get; set; }
+
+        [JsonPropertyName("pull_request")]
+        public PullRequestIssue PullRequest { get; set; }
+
+        [JsonPropertyName("body")]
+        public string Body { get; set; }
+
+        [JsonPropertyName("performed_via_github_app")]
+        public object PerformedViaGithubApp { get; set; }
+    }
+
+    public class PullRequestIssue
+    {
+        [JsonPropertyName("url")]
+        public string Url { get; set; }
+
+        [JsonPropertyName("html_url")]
+        public string HtmlUrl { get; set; }
+
+        [JsonPropertyName("diff_url")]
+        public string DiffUrl { get; set; }
+
+        [JsonPropertyName("patch_url")]
+        public string PatchUrl { get; set; }
+    }
+
+    public class IssueEvent
+    {
+        [JsonPropertyName("action")]
+        public string Action { get; set; }
+
+        [JsonPropertyName("issue")]
+        public Issue Issue { get; set; }
+
+        [JsonPropertyName("comment")]
+        public Comment Comment { get; set; }
+
+        [JsonPropertyName("repository")]
+        public Repository Repository { get; set; }
+
+        [JsonPropertyName("sender")]
+        public Sender Sender { get; set; }
+    }
+
+
 
 }
