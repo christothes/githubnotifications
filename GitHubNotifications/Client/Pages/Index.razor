@@ -124,6 +124,9 @@
 
         hubConnection.On<ClientComment>("NewComment", async (comment) =>
         {
+            if (OnlyMyPRs && comment.prAuthor != AuthState.User.GetGitHubLogin()){
+                return;
+            }
             if (null == comment.parentId || "0" == comment.parentId )
             {
                 commentLookup[comment.id] = comment;
