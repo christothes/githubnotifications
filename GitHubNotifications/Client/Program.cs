@@ -19,12 +19,10 @@ namespace GitHubNotifications.Client
             builder.Services.TryAddSingleton(sp => (HostAuthenticationStateProvider)sp.GetRequiredService<AuthenticationStateProvider>());
             builder.Services.AddTransient<AuthorizedHandler>();
             builder.Services.AddHttpClient("default", client => client.BaseAddress = new Uri(builder.HostEnvironment.BaseAddress));
-            builder.Services.AddHttpClient("authorizedClient")
-                .AddHttpMessageHandler<AuthorizedHandler>();
+            builder.Services.AddHttpClient("authorizedClient").AddHttpMessageHandler<AuthorizedHandler>();
             builder.Services.AddTransient(sp => sp.GetRequiredService<IHttpClientFactory>().CreateClient("default"));
             builder.Services.AddSingleton<DataService>();
             builder.RootComponents.Add<App>("app");
-
             await builder.Build().RunAsync();
         }
     }

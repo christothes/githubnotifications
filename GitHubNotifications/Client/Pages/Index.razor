@@ -10,9 +10,7 @@
         <div class="progress" style="height: 5px;  visibility: @DataService.IsInProgress;">
             <div class="progress-bar" role="progressbar" style="width: @DataService.Progress;"></div>
         </div>
-        @* <button @onclick="TestComment">Test Comment</button> *@
         <div class="custom-control custom-switch">
-            @* <input type="checkbox" id="prOption" class="custom-control-input" @bind="OnlyMyPRs">  *@
             <input type="checkbox" id="prOption" class="custom-control-input" @bind="DataService.OnlyMyPRs" @onclick="DataService.OnlyMyPRsClick"> 
             <label class="custom-control-label" for="prOption">Show only my PRs</label>
         </div>
