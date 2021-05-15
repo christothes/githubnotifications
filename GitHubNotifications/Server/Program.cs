@@ -17,7 +17,7 @@ namespace GitHubNotifications.Server
             Host.CreateDefaultBuilder(args)
              .ConfigureAppConfiguration((_, config) =>
                 {
-                    var keyVaultEndpoint = new Uri(Environment.GetEnvironmentVariable("VaultUri"));
+                    var keyVaultEndpoint = new Uri("https://ghnotifications.vault.azure.net/");//Environment.GetEnvironmentVariable("VaultUri"));
                     config.AddAzureKeyVault(
                         keyVaultEndpoint,
                         new ChainedTokenCredential(new ManagedIdentityCredential(), new VisualStudioCodeCredential()));

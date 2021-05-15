@@ -63,6 +63,18 @@ namespace WebApplication1.Server.Controllers
             return Ok(options);
         }
 
+        [HttpPost]
+        [Authorize]
+        public async Task<IActionResult> SetOptions(UserOptions options)
+        {
+            if (options == null)
+            {
+                return ValidationProblem($"{nameof(options)} is null");
+            }
+            await userTable.UpsertEntityAsync(options);
+            return Ok();
+        }
+
         private UserInfo CreateUserInfo(ClaimsPrincipal claimsPrincipal)
         {
             if (!claimsPrincipal.Identity.IsAuthenticated)

@@ -9,7 +9,8 @@
     <Authorized>
         @* <button @onclick="TestComment">Test Comment</button> *@
         <div class="custom-control custom-switch">
-            <input type="checkbox" id="prOption" class="custom-control-input" @bind="OnlyMyPRs" disabled>
+            @* <input type="checkbox" id="prOption" class="custom-control-input" @bind="OnlyMyPRs">  *@
+            <input type="checkbox" id="prOption" class="custom-control-input" @bind="OnlyMyPRs" @onclick="OnlyMyPRsClick"> 
             <label class="custom-control-label" for="prOption">Show only my PRs</label>
         </div>
          <div>
@@ -46,8 +47,27 @@
     private List<string> checks = new(30);
     private Dictionary<string, ClientComment> commentLookup = new();
     private TableClient tableClient = null;
-    private UserOptions userOptions = null;
-    private bool OnlyMyPRs = false;
+    private UserOptions userOptions = new UserOptions();
+    private bool initialized = false;
+    private string userLogin = string.Empty;
+    private bool OnlyMyPRs 
+    {
+        get => userOptions.OnlyMyPRs;
+        set {
+            Console.WriteLine($"Checkbox set OnlyMyPRs: {(bool)value}");
+            userOptions.OnlyMyPRs = (bool)value;
+        }
+    }
+
+    private async Task OnlyMyPRsClick()
+    {
+        // onclick happens before the binding is invoked,
+        //vso do the opposite of the value.
+       userOptions.OnlyMyPRs = !userOptions.OnlyMyPRs;
+       Console.WriteLine($"OnlyMyPRsClick {OnlyMyPRs}");
+       await Http.PostAsJsonAsync("user/SetOptions", userOptions);
+       await LoadComments();
+    }
 
     private async Task RequestPermission()
     {
@@ -99,6 +119,7 @@
     protected override async Task OnInitializedAsync()
     {       
         var AuthState = await AuthStateProvider.GetAuthenticationStateAsync();
+        userLogin = AuthState.User.GetGitHubLogin();
         permission = await GetPermissionState();
         if (permission != "granted")
         {
@@ -113,7 +134,7 @@
         hubConnection.On<DateTime, string, string, string, string, string>("CheckStatus", (updated, id, title, message, url, author) =>
         {
             Console.WriteLine($"Check failure for {title}");
-            if (author == AuthState.User.GetGitHubLogin())
+            if (author == userLogin)
             {
                 var encodedMsg = $"{updated.ToLocalTime().ToString("h:mm tt")}: {title}";
                 checks.Add(encodedMsg);
@@ -124,7 +145,8 @@
 
         hubConnection.On<ClientComment>("NewComment", async (comment) =>
         {
-            if (OnlyMyPRs && comment.prAuthor != AuthState.User.GetGitHubLogin()){
+            if (OnlyMyPRs && comment.prAuthor != userLogin)
+            {
                 return;
             }
             if (null == comment.parentId || "0" == comment.parentId )
@@ -146,23 +168,25 @@
         {
             var stringResult = await Http.GetStringAsync("Comment/GetSasUrl");
             userOptions = await Http.GetFromJsonAsync<UserOptions>("User/GetOptions");
-            OnlyMyPRs = userOptions?.OnlyMyPRs ?? false;
+            OnlyMyPRs = userOptions?.OnlyMyPRs ?? true;
+            initialized = true;
             StateHasChanged();
             var url = new Uri(stringResult);
             tableClient = new TableClient(url, new AzureSasCredential(url.Query), null);
-            await LoadComments(AuthState.User.GetGitHubLogin());
+            await LoadComments();
 
         } catch {}
     }
 
-    async Task LoadComments(string user)
+    async Task LoadComments()
     {
+        commentLookup.Clear();
         var comments = new List<ClientComment>();
         var ago = DateTime.UtcNow.AddDays(-2);
         Expression<Func<PRComment, bool>> filter = c => c.Created >= ago;
         if (userOptions?.OnlyMyPRs ?? false)
         {
-            filter = c => c.Created >= ago && c.PartitionKey == user;
+            filter = c => c.Created >= ago && c.PartitionKey == userLogin;
         }
         await foreach (PRComment comment in tableClient.QueryAsync<PRComment>(filter))
         {
