@@ -170,7 +170,7 @@ namespace GitHubNotifications.Server
             services.AddAuthorization();
             services.AddSingleton<IConfigureOptions<AuthorizationOptions>, ConfigureOrganizationPolicy>();
             services.AddSingleton<IAuthorizationHandler, OrganizationRequirementHandler>();
-            //services.AddHostedService<EventHubProcessor>();
+            services.AddHostedService<EventHubProcessor>();
           }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
