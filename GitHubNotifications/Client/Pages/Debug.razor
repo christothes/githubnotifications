@@ -1,0 +1,25 @@
+@page "/debug"
+
+@using System.Text.Json.Serialization;
+@inject HttpClient Http
+
+<button @onclick="Submit">Submit</button>
+<input id="eventType" @bind="eventType" />
+<textarea class="form-control" id="testPayload" rows="10" @bind="content"></textarea>
+
+@code
+{
+    private string content;
+    private string eventType = "issue_comment";
+    private Dictionary<string, object> payload;
+
+    async Task Submit()
+    {
+        var plainTextBytes = System.Text.Encoding.UTF8.GetBytes(content);
+        var encoded = System.Convert.ToBase64String(plainTextBytes);
+        payload = new Dictionary<string, object>();
+        payload["headers"] = new GitHubEvent{ XGitHubEvent = new[]{eventType} };
+        payload["content"] = encoded;
+        await Http.PostAsJsonAsync("Comment/TestEvent", payload);
+    }
+}

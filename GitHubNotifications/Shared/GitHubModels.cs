@@ -6,6 +6,13 @@ using System.Text.Json.Serialization;
 
 namespace GitHubNotifications.Models
 {
+
+    public class GitHubEvent
+    {
+        [JsonPropertyName("X-GitHub-Event")]
+        public string[] XGitHubEvent { get; set; }
+    }
+
     public class PRComment : ITableEntity
     {
         // PRauthor, tag

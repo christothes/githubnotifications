@@ -1,4 +1,7 @@
 using System;
+using System.Collections.Generic;
+using System.Text.Json;
+using System.Threading.Tasks;
 using Azure.Data.Tables;
 using Azure.Data.Tables.Sas;
 using GitHubNotifications.Shared;
@@ -18,13 +21,20 @@ namespace GitHubNotifications.Server
         private readonly TableServiceClient tableService;
         private readonly TableSharedKeyCredential cred;
         private readonly IHubContext<NotificationsHub> _hubContext;
+        private readonly EventDispatcher _dispatcher;
 
-        public CommentController(ILogger<CommentController> logger, TableServiceClient tableService, TableSharedKeyCredential cred, IHubContext<NotificationsHub> hub)
+        public CommentController(
+            ILogger<CommentController> logger,
+            TableServiceClient tableService,
+            TableSharedKeyCredential cred,
+            IHubContext<NotificationsHub> hub,
+            EventDispatcher dispatcher)
         {
             this._logger = logger;
             this.tableService = tableService;
             this.cred = cred;
             this._hubContext = hub;
+            this._dispatcher = dispatcher;
         }
 
         [HttpGet]
@@ -34,22 +44,14 @@ namespace GitHubNotifications.Server
             return $"https://{cred.AccountName}.table.core.windows.net?{sasBuilder.Sign(cred)}";
         }
 
-        [HttpGet]
-        public IActionResult TestComment()
+        [HttpPost]
+        public async Task<IActionResult> TestEvent(Dictionary<string, JsonElement> jsonPayload)
         {
-            var model = new CommentModel(
-                "1234",
-                "pr.Comment.User.Login",
-                "pr.Comment.HtmlUrl",
-                DateTime.Now,
-                "pr.PullRequest.Title",
-                "pr.Comment.Body",
-                "0",
-                null);
-
-            _hubContext.Clients.All.SendAsync(
-               "NewComment", model).GetAwaiter().GetResult();
-               return Ok();
+            if (User.GetGitHubLogin() != "christothes"){
+                return Unauthorized();
+            }
+            await _dispatcher.ProcessEvent(jsonPayload);
+            return Ok();
         }
     }
 }

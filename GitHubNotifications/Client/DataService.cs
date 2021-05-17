@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Components;
 using Azure;
 using Microsoft.AspNetCore.Components.Authorization;
 using System.Linq;
+using GitHubNotifications.Shared;
 
 namespace GitHubNotifications.Client
 {
@@ -45,6 +46,7 @@ namespace GitHubNotifications.Client
             JS = jSRuntime;
             NavigationManager = navigationManager;
             AuthState = auth.GetAuthenticationStateAsync().GetAwaiter().GetResult();
+            userLogin = AuthState.User.GetGitHubLogin();
         }
 
         public async Task InitAsync(Action reportProgress)
@@ -85,6 +87,7 @@ namespace GitHubNotifications.Client
                 }
                 AddComment(comment);
                 await CreateNotifcationAsync(comment.created, comment.id, comment.title, $"@{comment.author}: {comment.body}", comment.uri);
+                ReportProgress();
             });
 
 
@@ -177,6 +180,7 @@ namespace GitHubNotifications.Client
                     parentId = comment.ParentId,
                     parentAuthor = comment.ParentAuthor,
                     title = comment.PrTitle,
+                    prNumber = comment.PrNumber,
                     uri = comment.Uri,
                     sortDate = comment.Created.ToLocalTime()
                 };
