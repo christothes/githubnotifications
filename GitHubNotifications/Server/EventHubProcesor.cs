@@ -1,19 +1,10 @@
-﻿using Azure.Data.Tables;
-using Azure.Messaging.EventHubs;
-using Microsoft.AspNetCore.SignalR;
+﻿using Azure.Messaging.EventHubs;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Azure.Messaging.EventHubs.Processor;
-using GitHubNotifications.Models;
-using GitHubNotifications.Shared;
-using System.Runtime.CompilerServices;
 
 namespace GitHubNotifications
 {
@@ -50,8 +41,6 @@ namespace GitHubNotifications
             return;
 #else
             _logger.LogInformation($"{nameof(EventHubProcessor)} Hosted Service running.");
-            await prTable.CreateIfNotExistsAsync(stoppingToken);
-            await commentTable.CreateIfNotExistsAsync(stoppingToken);
             await _processor.StartProcessingAsync(stoppingToken);
 #endif
         }
