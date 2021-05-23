@@ -50,8 +50,8 @@ namespace GitHubNotifications
                 {
                     if (element.Key == "headers")
                     {
-                        _logger.LogWarning(element.Value.ValueKind.ToString());
                         eventType = element.Value.EnumerateObject().First(v => v.Name == "X-GitHub-Event").Value[0].GetString();
+                        _logger.LogInformation($"received event {eventType}");
                     }
                     if (element.Key == "content")
                     {

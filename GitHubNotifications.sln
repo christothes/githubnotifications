@@ -9,6 +9,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GitHubNotifications.Client"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GitHubNotifications.Shared", "GitHubNotifications\Shared\GitHubNotifications.Shared.csproj", "{504FF20F-2C90-4B97-AA9B-BA4EA97383AC}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "GitHubNotifications", "GitHubNotifications", "{43283531-9297-442F-B069-D3B766518D90}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GitHubNotifications.Tests", "GitHubNotifications\Tests\GitHubNotifications.Tests.csproj", "{2531034B-B569-49A0-9B61-ACB73A0E2FA9}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,11 +31,18 @@ Global
 		{504FF20F-2C90-4B97-AA9B-BA4EA97383AC}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{504FF20F-2C90-4B97-AA9B-BA4EA97383AC}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{504FF20F-2C90-4B97-AA9B-BA4EA97383AC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2531034B-B569-49A0-9B61-ACB73A0E2FA9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2531034B-B569-49A0-9B61-ACB73A0E2FA9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2531034B-B569-49A0-9B61-ACB73A0E2FA9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2531034B-B569-49A0-9B61-ACB73A0E2FA9}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {4D223939-5B7C-4430-B9B3-BE016FD6DE48}
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{2531034B-B569-49A0-9B61-ACB73A0E2FA9} = {43283531-9297-442F-B069-D3B766518D90}
 	EndGlobalSection
 EndGlobal

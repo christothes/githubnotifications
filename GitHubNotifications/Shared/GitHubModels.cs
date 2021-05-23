@@ -1179,7 +1179,7 @@ namespace GitHubNotifications.Models
         public long InReplyToId { get; set; }
     }
 
-    public class PullRequestReviewEvent
+    public class PullRequestReviewEvent : ICommentEvent
     {
         [JsonPropertyName("action")]
         public string Action { get; set; }
@@ -1299,7 +1299,7 @@ namespace GitHubNotifications.Models
         public string PatchUrl { get; set; }
     }
 
-    public class IssueEvent
+    public class IssueEvent : ICommentEvent
     {
         [JsonPropertyName("action")]
         public string Action { get; set; }
@@ -1317,6 +1317,8 @@ namespace GitHubNotifications.Models
         public Sender Sender { get; set; }
     }
 
-
-
+    public interface ICommentEvent
+    {
+        public Comment Comment { get; set; }
+    }
 }
