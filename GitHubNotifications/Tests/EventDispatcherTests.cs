@@ -136,7 +136,8 @@ namespace GitHubNotifications.Tests
                 PullRequest = new PullRequestIssue
                 {
                     Url = "https://github.com/pr/1234"
-                }
+                },
+                Labels = new List<Label>()
             },
             Comment = new Comment
             {
