@@ -72,6 +72,11 @@ namespace GitHubNotifications.Tests
                             default,
                             default), Times.Once);
                         prstableMock.Verify();
+                        commentTableMock.Verify(m => m.DeleteEntityAsync(
+                            It.IsAny<string>(),
+                            It.IsAny<string>(),
+                            default,
+                            default), Times.Exactly(prCommentsQueryresponse.Count));
                     }
                     else
                     {
@@ -112,6 +117,12 @@ namespace GitHubNotifications.Tests
                 {"headers", new GitHubEvent{ XGitHubEvent = new[]{"pull_request"} }},
                 {"content", prEvent}
             }};
+
+            yield return new object[]{new Dictionary<string, object>
+            {
+                {"headers", new GitHubEvent{ XGitHubEvent = new[]{"pull_request"} }},
+                {"content", prMergedEvent}
+            }};
         }
 
         private static User user = new User { Login = "somelogin" };
@@ -151,7 +162,23 @@ namespace GitHubNotifications.Tests
                 }
             },
         };
-
+        private static PullRequestEvent prMergedEvent = new PullRequestEvent
+        {
+            Action = "closed",
+            PullRequest = new PullRequest
+            {
+                Merged = true,
+                Title = "pr title",
+                Url = "https://github.com/pr/1234",
+                User = user,
+                Head = new Head { Sha = "headsha" },
+                HtmlUrl = "https://github.com/pr/1234",
+                Labels = new List<Label>
+                {
+                    new Label{ Name = "some label"}
+                }
+            },
+        };
         private static PullRequestReviewEvent prCommentEvent = new PullRequestReviewEvent
         {
             PullRequest = new PullRequest

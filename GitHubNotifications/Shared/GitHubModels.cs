@@ -2,6 +2,7 @@
 using Azure.Data.Tables;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json.Serialization;
 
 namespace GitHubNotifications.Models
@@ -29,6 +30,7 @@ namespace GitHubNotifications.Models
         public string Author { get; set; }
         public string PrNumber { get; set; }
         public string PrTitle { get; set; }
+        public string Labels { get; set; }
 
         public PRComment() { }
 
@@ -43,6 +45,7 @@ namespace GitHubNotifications.Models
             Author = pr.Comment.User.Login;
             PrNumber = pr.PullRequest.Number.ToString();
             PrTitle = pr.PullRequest.Title;
+            Labels = string.Join(";", pr.PullRequest.Labels.Select(l => l.Name));
         }
 
         public PRComment(IssueEvent i)
@@ -56,6 +59,7 @@ namespace GitHubNotifications.Models
             Author = i.Comment.User.Login;
             PrNumber = i.Issue.PullRequest.Url.Substring(i.Issue.Url.LastIndexOf('/') + 1);
             PrTitle = i.Issue.Title;
+            Labels = string.Join(";", i.Issue.Labels.Select(l => l.Name));
         }
     }
 
@@ -1239,7 +1243,7 @@ namespace GitHubNotifications.Models
         public User User { get; set; }
 
         [JsonPropertyName("labels")]
-        public List<object> Labels { get; set; }
+        public List<Label> Labels { get; set; }
 
         [JsonPropertyName("state")]
         public string State { get; set; }
@@ -1248,10 +1252,10 @@ namespace GitHubNotifications.Models
         public bool Locked { get; set; }
 
         [JsonPropertyName("assignee")]
-        public object Assignee { get; set; }
+        public User Assignee { get; set; }
 
         [JsonPropertyName("assignees")]
-        public List<object> Assignees { get; set; }
+        public List<User> Assignees { get; set; }
 
         [JsonPropertyName("milestone")]
         public object Milestone { get; set; }

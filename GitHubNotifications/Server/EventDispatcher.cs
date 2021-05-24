@@ -76,7 +76,7 @@ namespace GitHubNotifications
                             {
                                 try
                                 {
-                                    prTable.DeleteEntity(PR_PK, pr.PullRequest.Head.Sha);
+                                    await prTable.DeleteEntityAsync(PR_PK, pr.PullRequest.Head.Sha);
                                 }
                                 catch
                                 { }
@@ -90,17 +90,20 @@ namespace GitHubNotifications
                                 catch
                                 { }
                             }
-                            await prTable.UpsertEntityAsync(
-                                new PREntity
-                                {
-                                    PartitionKey = PR_PK,
-                                    RowKey = pr.PullRequest.Head.Sha,
-                                    Title = pr.PullRequest.Title,
-                                    Url = pr.PullRequest.HtmlUrl,
-                                    Author = pr.PullRequest.User.Login,
-                                    Labels = string.Join(";", pr.PullRequest.Labels.Select(l => l.Name))
-                                },
-                                TableUpdateMode.Replace);
+                            else
+                            {
+                                await prTable.UpsertEntityAsync(
+                                    new PREntity
+                                    {
+                                        PartitionKey = PR_PK,
+                                        RowKey = pr.PullRequest.Head.Sha,
+                                        Title = pr.PullRequest.Title,
+                                        Url = pr.PullRequest.HtmlUrl,
+                                        Author = pr.PullRequest.User.Login,
+                                        Labels = string.Join(";", pr.PullRequest.Labels.Select(l => l.Name))
+                                    },
+                                    TableUpdateMode.Replace);
+                            }
                         }
                         if (webhookObj is CheckSuiteEvent ch)
                         {
