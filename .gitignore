@@ -353,3 +353,5 @@ MigrationBackup/
 
 # coverage files
 lcov.info
+
+.DS_Store

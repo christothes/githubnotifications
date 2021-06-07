@@ -7,7 +7,7 @@
             "type": "process",
             "args": [
                 "build",
-                "${workspaceFolder}/GitHubNotifications/Server/GitHubNotifications.Server.csproj",
+                "${workspaceFolder}/",
                 "/property:GenerateFullPaths=true",
                 "/consoleloggerparameters:NoSummary"
             ],
