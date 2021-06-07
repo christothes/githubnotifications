@@ -53,7 +53,7 @@ namespace GitHubNotifications.Server
                 evt.Issue.Number.ToString(),
                 evt.Issue.User.Login,
                 evt.Comment.Body,
-                "",
+                evt.Comment.InReplyToId.ToString(),
                 "");
 
             await _hubContext.Clients.All.SendAsync(
