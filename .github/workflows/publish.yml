@@ -37,6 +37,7 @@ jobs:
         run: |
           dotnet restore
           dotnet build --configuration Release
+          dotnet test
           dotnet publish -c Release -o '${{ env.AZURE_WEBAPP_PACKAGE_PATH }}/myapp' 
           
       # Deploy to Azure Web apps
