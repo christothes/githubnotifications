@@ -167,7 +167,7 @@ namespace GitHubNotifications.Client
             ReportProgress();
             Console.WriteLine(progressVal);
             var comments = new List<ClientComment>();
-            var ago = DateTime.UtcNow.AddDays(-2);
+            var ago = DateTime.UtcNow.AddDays(-7);
             Expression<Func<PRComment, bool>> filter = c => c.Created >= ago;
             if (userOptions?.OnlyMyPRs ?? false)
             {
