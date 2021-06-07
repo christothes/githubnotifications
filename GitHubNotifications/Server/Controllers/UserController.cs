@@ -23,8 +23,9 @@ namespace WebApplication1.Server.Controllers
 
         public UserController(ILogger<UserController> logger, TableServiceClient tableService)
         {
-            this._logger = logger;
-            this.userTable = tableService.GetTableClient("users");
+            _logger = logger;
+            userTable = tableService.GetTableClient("users");
+            userTable.CreateIfNotExists();
         }
 
         [HttpGet]

@@ -176,6 +176,7 @@ namespace GitHubNotifications.Client
                     author = comment.Author,
                     body = comment.Body,
                     created = comment.Created.ToLocalTime(),
+                    updated = comment.Updated.ToLocalTime(),
                     id = comment.RowKey,
                     parentId = comment.ParentId,
                     parentAuthor = comment.ParentAuthor,
@@ -207,8 +208,8 @@ namespace GitHubNotifications.Client
             comment.created = comment.sortDate;
             if (comment.parentId != "0" && comment.parentId != null && commentLookup.TryGetValue(comment.parentId, out var parent))
             {
-                parent.replies ??= new List<ClientComment>();
-                parent.replies.Add(comment);
+                parent.replies ??= new Dictionary<string, ClientComment>();
+                parent.replies[comment.id] = comment;
                 if (comment.created > parent.sortDate)
                 {
                     parent.sortDate = comment.created;

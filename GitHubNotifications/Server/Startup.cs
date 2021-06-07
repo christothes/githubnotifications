@@ -23,7 +23,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
-using Microsoft.Net.Http.Headers;
 using GitHubNotifications.Shared;
 
 namespace GitHubNotifications.Server
@@ -172,7 +171,9 @@ namespace GitHubNotifications.Server
             services.AddSingleton<IAuthorizationHandler, OrganizationRequirementHandler>();
             services.AddSingleton<EventDispatcher>();
             services.AddHostedService<EventHubProcessor>();
-          }
+            services.AddHostedService<TableWorker>();
+            services.AddHostedService<HubWorker>();
+        }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)

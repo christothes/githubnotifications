@@ -1,46 +1,68 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
-using Azure.Data.Tables;
 using GitHubNotifications.Models;
-using GitHubNotifications.Shared;
-using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 
-namespace GitHubNotifications
+namespace GitHubNotifications.Server
 {
     public class EventDispatcher
     {
-        public const string PR_PK = "pr";
         private readonly ILogger<EventDispatcher> _logger;
-        private readonly IHubContext<NotificationsHub> _hubContext;
-        private readonly TableServiceClient tableService;
-        private readonly TableClient prTable;
-        private readonly TableClient commentTable;
+        internal ConcurrentBag<Func<PullRequestReviewEvent, Task>> reviewEventSubscribers = new ConcurrentBag<Func<PullRequestReviewEvent, Task>>();
+        internal ConcurrentBag<Func<PullRequestEvent, Task>> prEventSubscribers = new ConcurrentBag<Func<PullRequestEvent, Task>>();
+        internal ConcurrentBag<Func<CheckSuiteEvent, Task>> checkEventSubscribers = new ConcurrentBag<Func<CheckSuiteEvent, Task>>();
+        internal ConcurrentBag<Func<IssueEvent, Task>> issueEventSubscribers = new ConcurrentBag<Func<IssueEvent, Task>>();
 
-        public EventDispatcher(
-            ILogger<EventDispatcher> logger,
-            IHubContext<NotificationsHub> hub,
-            TableServiceClient tableService)
+        protected EventDispatcher() { }
+
+        public EventDispatcher(ILogger<EventDispatcher> logger)
         {
             _logger = logger;
-            _hubContext = hub;
-            this.tableService = tableService;
-            prTable = tableService.GetTableClient("prs");
-            commentTable = tableService.GetTableClient("comments");
-            tableService.CreateTableIfNotExists("users");
         }
 
-        public async Task ProcessEvent(string eventBody)
+        public void Register(Func<PullRequestReviewEvent, Task> func)
+        {
+            reviewEventSubscribers.Add(func);
+        }
+
+        public void Register(Func<PullRequestEvent, Task> func)
+        {
+            prEventSubscribers.Add(func);
+        }
+
+        public void Register(Func<CheckSuiteEvent, Task> func)
+        {
+            checkEventSubscribers.Add(func);
+        }
+        public void Register(Func<IssueEvent, Task> func)
+        {
+            issueEventSubscribers.Add(func);
+        }
+        internal async Task FireEvent<T>(T evt)
+        {
+            var tasks = evt switch
+            {
+                PullRequestReviewEvent r => reviewEventSubscribers.ToList().Select(f => f(r)),
+                PullRequestEvent pr => prEventSubscribers.ToList().Select(f => f(pr)),
+                CheckSuiteEvent c => checkEventSubscribers.ToList().Select(f => f(c)),
+                IssueEvent i => issueEventSubscribers.ToList().Select(f => f(i)),
+                _ => throw new InvalidOperationException($"Event handler uknknow: {evt.GetType().FullName}")
+            };
+            await Task.WhenAll(tasks);
+        }
+
+        internal async Task ProcessEvent(string eventBody)
         {
             var elementMap = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(eventBody);
             await ProcessEvent(elementMap);
         }
 
-        public async Task ProcessEvent(Dictionary<string, JsonElement> elementMap)
+        internal async Task ProcessEvent(Dictionary<string, JsonElement> elementMap)
         {
             string eventType = null;
             string decoded = string.Empty;
@@ -70,67 +92,7 @@ namespace GitHubNotifications
                             continue;
                         }
                         var webhookObj = JsonSerializer.Deserialize(decoded, webhookType);
-                        if (webhookObj is PullRequestEvent pr)
-                        {
-                            if (pr.Action == "closed" && pr.PullRequest.Merged)
-                            {
-                                try
-                                {
-                                    await prTable.DeleteEntityAsync(PR_PK, pr.PullRequest.Head.Sha);
-                                }
-                                catch
-                                { }
-                                try
-                                {
-                                    await foreach (var comment in commentTable.QueryAsync<PRComment>(e => e.PartitionKey == pr.PullRequest.User.Login && e.PrNumber == pr.PullRequest.Number.ToString()))
-                                    {
-                                        await commentTable.DeleteEntityAsync(comment.PartitionKey, comment.RowKey);
-                                    }
-                                }
-                                catch
-                                { }
-                            }
-                            else
-                            {
-                                await prTable.UpsertEntityAsync(
-                                    new PREntity
-                                    {
-                                        PartitionKey = PR_PK,
-                                        RowKey = pr.PullRequest.Head.Sha,
-                                        Title = pr.PullRequest.Title,
-                                        Url = pr.PullRequest.HtmlUrl,
-                                        Author = pr.PullRequest.User.Login,
-                                        Labels = string.Join(";", pr.PullRequest.Labels.Select(l => l.Name))
-                                    },
-                                    TableUpdateMode.Replace);
-                            }
-                        }
-                        if (webhookObj is CheckSuiteEvent ch)
-                        {
-                            await SendCheckStatusMail(ch);
-                        }
-                        if (webhookObj is PullRequestReviewEvent r)
-                        {
-                            await prTable.UpsertEntityAsync(
-                                new PREntity
-                                {
-                                    PartitionKey = PR_PK,
-                                    RowKey = r.PullRequest.Head.Sha,
-                                    Title = r.PullRequest.Title,
-                                    Url = r.PullRequest.HtmlUrl,
-                                    Author = r.PullRequest.User.Login,
-                                    Labels = string.Join(";", r.PullRequest.Labels.Select(l => l.Name))
-                                },
-                                TableUpdateMode.Replace);
-
-                            await commentTable.UpsertEntityAsync(new PRComment(r), TableUpdateMode.Replace);
-                            await SendPrCommentMail(r.Comment, r.PullRequest.User.Login, r.PullRequest.Title, r.PullRequest.Number.ToString(), commentTable);
-                        }
-                        if (webhookObj is IssueEvent i)
-                        {
-                            await commentTable.UpsertEntityAsync(new PRComment(i), TableUpdateMode.Replace);
-                            await SendPrCommentMail(i.Comment, i.Issue.User.Login, i.Issue.Title, i.Issue.Number.ToString(), commentTable);
-                        }
+                        await FireEvent(webhookObj);
                     }
                 }
                 catch (Exception ex)
@@ -140,71 +102,6 @@ namespace GitHubNotifications
                     _logger.LogError(decoded);
                 }
             }
-        }
-
-        public async Task SendPrCommentMail(Comment comment, string prAuthor, string prTitle, string prNumber, TableClient table)
-        {
-            PRComment inReplyTo = null;
-            if (comment.InReplyToId > 0)
-            {
-                try
-                {
-                    inReplyTo = await table.GetEntityAsync<PRComment>(prAuthor, comment.InReplyToId.ToString());
-                }
-                catch
-                {
-                    _logger.LogWarning($"\t*Found no reply for {comment.HtmlUrl}");
-                }
-            }
-
-            _logger.LogInformation($"{comment.CreatedAt.ToLocalTime()} PRComment Url: {comment.HtmlUrl}");
-
-            var model = new CommentModel(
-                comment.Id.ToString(),
-                comment.User.Login,
-                comment.HtmlUrl,
-                comment.UpdatedAt,
-                prTitle,
-                prNumber,
-                prAuthor,
-                comment.Body,
-                inReplyTo?.RowKey,
-                inReplyTo?.Author);
-
-            await _hubContext.Clients.All.SendAsync(
-                "NewComment", model);
-        }
-
-        public async Task SendCheckStatusMail(CheckSuiteEvent webhookEvent)
-        {
-            if (webhookEvent.CheckSuite.Conclusion != "failure")
-            {
-                return;
-            }
-            PREntity prDetails;
-            try
-            {
-                prDetails = await prTable.GetEntityAsync<PREntity>(PR_PK, webhookEvent.CheckSuite.HeadCommit.Id);
-            }
-            catch
-            {
-                _logger.LogWarning("*** Could not find PR in cache ***");
-                return;
-            }
-            var subject = $"Checks {webhookEvent.CheckSuite.Conclusion} for PR: {prDetails.Title}";
-            var plainTextContent = $"PR: {prDetails.Url}";
-
-            _logger.LogInformation(subject);
-            _logger.LogInformation(plainTextContent);
-
-            await _hubContext.Clients.All.SendAsync(
-                "CheckStatus",
-                webhookEvent.CheckSuite.UpdatedAt.ToLocalTime(),
-                webhookEvent.CheckSuite.Id.ToString(),
-                subject,
-                plainTextContent,
-                prDetails.Url,
-                prDetails.Author);
         }
     }
 }

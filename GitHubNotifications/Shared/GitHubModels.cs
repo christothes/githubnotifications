@@ -25,6 +25,7 @@ namespace GitHubNotifications.Models
         public string Body { get; set; }
         public string Uri { get; set; }
         public DateTime Created { get; set; }
+        public DateTime Updated { get; set; }
         public string ParentId { get; set; }
         public string ParentAuthor { get; set; }
         public string Author { get; set; }
@@ -41,6 +42,7 @@ namespace GitHubNotifications.Models
             Body = pr.Comment.Body;
             Uri = pr.Comment.HtmlUrl;
             Created = pr.Comment.CreatedAt;
+            Updated = pr.Comment.UpdatedAt;
             ParentId = pr.Comment.InReplyToId.ToString();
             Author = pr.Comment.User.Login;
             PrNumber = pr.PullRequest.Number.ToString();
@@ -55,6 +57,7 @@ namespace GitHubNotifications.Models
             Body = i.Comment.Body;
             Uri = i.Comment.HtmlUrl;
             Created = i.Comment.CreatedAt;
+            Updated = i.Comment.UpdatedAt;
             ParentId = i.Comment.InReplyToId.ToString();
             Author = i.Comment.User.Login;
             PrNumber = i.Issue.PullRequest.Url.Substring(i.Issue.Url.LastIndexOf('/') + 1);

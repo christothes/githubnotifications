@@ -1,32 +1,37 @@
 ﻿<div class="list-group-item">
     <div>
         <strong><a href="@Comment.uri" target="_blank">@Comment.title</a><br />
-        @at@Comment.author</strong> -
-        @if (@Comment.created.Day == DateTime.Now.Day)
+        @at@Comment.author</strong> - 
+        @if (@Comment.isEdited)
         {
-            @Comment.created.ToString("h:mm tt")
+            @edited
+        }
+        @if (@refDate.Day == DateTime.Now.Day)
+        {
+            @refDate.ToString("h:mm tt")
         }
         else
         {
-            @Comment.created.ToString("M/dd h:mm tt")
+            @refDate.ToString("M/dd h:mm tt")
         }
     </div>
     @FromMarkdown(Comment.body)
     @if (Comment.replies?.Count > 0)
     {
         <div class="list-group" style="max-width: inherit; overflow-wrap: anywhere;">
-            @foreach (var reply in Comment.replies.OrderBy(c => c.created))
+            @foreach (var reply in Comment.replies.Values.OrderBy(c => c.created))
             {
+                var replyRefDate = reply.isEdited ? reply.updated : reply.created;
                 <div class="list-group-item">
                     <div>
                         <strong>@at@reply.author</strong> -
-                        @if (@reply.created.Day == DateTime.Now.Day)
+                        @if (@replyRefDate.Day == DateTime.Now.Day)
                         {
-                            @reply.created.ToString("h:mm tt")
+                            @replyRefDate.ToString("h:mm tt")
                         }
                         else
                         {
-                            @reply.created.ToString("M/dd h:mm tt")
+                            @replyRefDate.ToString("M/dd h:mm tt")
                         }
                     </div>
                     @FromMarkdown(reply.body)
@@ -42,6 +47,14 @@
     public ClientComment Comment { get; set; }
 
     private string at = "@";
+    private string edited = "edited ";
+    private DateTime refDate;
+
+    protected override async Task OnInitializedAsync()
+    {
+        refDate = Comment.isEdited ? Comment.updated : Comment.created;
+    }
+
     private MarkupString FromMarkdown(string s)
     {
         var pipeline = new MarkdownPipelineBuilder().UseAdvancedExtensions().Build();

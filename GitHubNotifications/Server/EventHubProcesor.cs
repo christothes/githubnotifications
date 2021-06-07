@@ -6,7 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Azure.Messaging.EventHubs.Processor;
 
-namespace GitHubNotifications
+namespace GitHubNotifications.Server
 {
     public class EventHubProcessor : IHostedService, IDisposable
     {
