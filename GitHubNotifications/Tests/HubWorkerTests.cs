@@ -1,11 +1,5 @@
-using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Linq.Expressions;
-using System.Text.Json;
 using System.Threading.Tasks;
-using Azure;
-using Azure.Data.Tables;
 using GitHubNotifications.Models;
 using GitHubNotifications.Server;
 using GitHubNotifications.Shared;
@@ -13,6 +7,7 @@ using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Logging;
 using Moq;
 using NUnit.Framework;
+using static GitHubNotifications.Shared.TestData;
 
 namespace GitHubNotifications.Tests
 {

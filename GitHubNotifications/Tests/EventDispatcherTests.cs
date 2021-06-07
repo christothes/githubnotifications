@@ -1,8 +1,6 @@
 using NUnit.Framework;
 using Moq;
 using Microsoft.Extensions.Logging;
-using Microsoft.AspNetCore.SignalR;
-using Azure.Data.Tables;
 using System.Collections.Generic;
 using GitHubNotifications.Models;
 using System.Threading.Tasks;
@@ -10,17 +8,14 @@ using System;
 using System.Linq;
 using GitHubNotifications.Server;
 using System.Text.Json;
+using static GitHubNotifications.Shared.TestData;
 
 namespace GitHubNotifications.Tests
 {
     public class EventDispatcherTests : TestBase
     {
         private EventDispatcher target;
-        Mock<TableClient> commentTableMock;
-        Mock<TableClient> prstableMock;
-        Mock<TableServiceClient> tableServiceMock;
         Mock<ILogger<EventDispatcher>> loggerMock;
-        Mock<IHubContext<NotificationsHub>> hubMock;
         bool prEventCalled = false;
         bool reviewEventCalled = false;
         bool issueEventCalled = false;

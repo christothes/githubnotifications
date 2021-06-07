@@ -4,22 +4,18 @@
 @inject HttpClient Http
 
 <button @onclick="Submit">Submit</button>
-<input id="eventType" @bind="eventType" />
-<textarea class="form-control" id="testPayload" rows="10" @bind="content"></textarea>
+<select name="eventType" id="event-select" @bind="testEvent.EventType">
+    <option value="">--Choose an event to send to the client--</option>
+    <option value="comment">PR Comment</option>
+    <option value="check">Check Failure</option>
+</select>
 
 @code
 {
-    private string content;
-    private string eventType = "issue_comment";
-    private Dictionary<string, object> payload;
+    private TestEvent testEvent = new TestEvent();
 
     async Task Submit()
     {
-        var plainTextBytes = System.Text.Encoding.UTF8.GetBytes(content);
-        var encoded = System.Convert.ToBase64String(plainTextBytes);
-        payload = new Dictionary<string, object>();
-        payload["headers"] = new GitHubEvent{ XGitHubEvent = new[]{eventType} };
-        payload["content"] = encoded;
-        await Http.PostAsJsonAsync("Comment/TestEvent", payload);
+        await Http.PostAsJsonAsync("Debug/TestEvent", testEvent);
     }
 }

@@ -33,7 +33,7 @@ namespace GitHubNotifications.Server
                 evt.PullRequest.Number.ToString(),
                 evt.PullRequest.User.Login,
                 evt.Comment.Body,
-                "",
+                evt.Comment.InReplyToId.ToString(),
                 "");
 
             await _hubContext.Clients.All.SendAsync(

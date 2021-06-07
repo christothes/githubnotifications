@@ -66,23 +66,28 @@ namespace GitHubNotifications.Client
 
             hubConnection.On<DateTime, string, string, string, string, string>("CheckStatus", async (updated, id, title, message, url, author) =>
             {
-                Console.WriteLine($"Check failure for {title}");
+                Console.WriteLine($"{title}");
                 if (author == userLogin)
                 {
                     var encodedMsg = $"{updated.ToLocalTime().ToString("h:mm tt")}: {title}";
                     checks.Add(encodedMsg);
                     await CreateNotifcationAsync(updated.ToLocalTime(), id, title, message, url);
+                    ReportProgress();
                 }
             });
 
             hubConnection.On<ClientComment>("NewComment", async (comment) =>
             {
+                Console.WriteLine($"Received comment id: {comment.id}");
                 if (OnlyMyPRs && comment.prAuthor != userLogin)
                 {
                     return;
                 }
+
+                Console.WriteLine($"Processing comment id: {comment.id}");
                 if (null == comment.parentId || "0" == comment.parentId)
                 {
+                    Console.WriteLine($"Adding comment id: {comment.id}");
                     commentLookup[comment.id] = comment;
                 }
                 AddComment(comment);

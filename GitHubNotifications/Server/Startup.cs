@@ -170,6 +170,7 @@ namespace GitHubNotifications.Server
             services.AddSingleton<IConfigureOptions<AuthorizationOptions>, ConfigureOrganizationPolicy>();
             services.AddSingleton<IAuthorizationHandler, OrganizationRequirementHandler>();
             services.AddSingleton<EventDispatcher>();
+            services.AddSingleton<HubWorker>();
             services.AddHostedService<EventHubProcessor>();
             services.AddHostedService<TableWorker>();
             services.AddHostedService<HubWorker>();

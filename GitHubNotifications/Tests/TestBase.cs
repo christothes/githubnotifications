@@ -5,10 +5,10 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Azure;
 using GitHubNotifications.Models;
+using GitHubNotifications.Shared;
 
 namespace GitHubNotifications.Tests
 {
-
     public class TestBase
     {
         public static IEnumerable<object[]> Payloads()
@@ -16,119 +16,33 @@ namespace GitHubNotifications.Tests
             yield return new object[]{new Dictionary<string, object>
             {
                 {"headers", new GitHubEvent{ XGitHubEvent = new[]{"issue_comment"} }},
-                {"content", issueEvent}
+                {"content", TestData.issueEvent}
             }};
 
             yield return new object[]{new Dictionary<string, object>
             {
                 {"headers", new GitHubEvent{ XGitHubEvent = new[]{"pull_request_review_comment"} }},
-                {"content", prCommentEvent}
+                {"content", TestData.prCommentEvent}
             }};
 
             yield return new object[]{new Dictionary<string, object>
             {
                 {"headers", new GitHubEvent{ XGitHubEvent = new[]{"pull_request"} }},
-                {"content", prEvent}
+                {"content", TestData.prEvent}
             }};
 
             yield return new object[]{new Dictionary<string, object>
             {
                 {"headers", new GitHubEvent{ XGitHubEvent = new[]{"pull_request"} }},
-                {"content", prMergedEvent}
+                {"content", TestData.prMergedEvent}
             }};
 
             yield return new object[]{new Dictionary<string, object>
             {
                 {"headers", new GitHubEvent{ XGitHubEvent = new[]{"check_suite"} }},
-                {"content", checkSuiteEvent}
+                {"content", TestData.checkSuiteEvent}
             }};
         }
-
-        protected static User user = new User { Login = "somelogin" };
-        protected static PullRequest GetPullRequest(bool merged = false) =>
-        new PullRequest
-        {
-            Merged = merged,
-            Title = "pr title",
-            Url = "https://github.com/pr/1234",
-            User = user,
-            Head = new Head { Sha = "headsha" },
-            HtmlUrl = "https://github.com/pr/1234",
-            Labels = new List<Label>
-            {
-                new Label{ Name = "some label"}
-            }
-        };
-
-        protected static CheckSuiteEvent checkSuiteEvent = new CheckSuiteEvent
-        {
-            Action = "check_suite",
-            CheckSuite = new CheckSuite
-            {
-                Conclusion = "failure",
-                PullRequests = new List<PullRequest>
-                {
-                    GetPullRequest()
-                },
-                HeadSha = "sha",
-                CreatedAt = DateTime.Now,
-            }
-        };
-
-        protected static IssueEvent issueEvent = new IssueEvent()
-        {
-            Issue = new Issue
-            {
-                Id = 4444,
-                User = user,
-                Url = "https://github.com/issue/1234",
-                PullRequest = new PullRequestIssue
-                {
-                    Url = "https://github.com/pr/1234"
-                },
-                Labels = new List<Label>()
-            },
-            Comment = new Comment
-            {
-                Body = "issue comment body",
-                HtmlUrl = "https://github.com",
-                CreatedAt = DateTime.Now,
-                InReplyToId = 0,
-                User = user
-            }
-        };
-        protected static PullRequestEvent prEvent = new PullRequestEvent
-        {
-            PullRequest = GetPullRequest(),
-        };
-        protected static PullRequestEvent prMergedEvent = new PullRequestEvent
-        {
-            Action = "closed",
-            PullRequest = GetPullRequest(true),
-        };
-        protected static PullRequestReviewEvent prCommentEvent = new PullRequestReviewEvent
-        {
-            PullRequest = new PullRequest
-            {
-                Title = "pr title",
-                Url = "https://github.com/pr/1234",
-                User = user,
-                Head = new Head { Sha = "headsha" },
-                HtmlUrl = "https://github.com/pr/1234",
-                Labels = new List<Label>
-                {
-                    new Label{ Name = "some label"}
-                }
-            },
-            Comment = new Comment
-            {
-                Body = "issue comment body",
-                HtmlUrl = "https://github.com",
-                CreatedAt = DateTime.Now,
-                InReplyToId = 0,
-                User = user
-            },
-        };
 
         protected static string EncodePayload<T>(T payload)
         {
@@ -136,7 +50,6 @@ namespace GitHubNotifications.Tests
             var plainTextBytes = System.Text.Encoding.UTF8.GetBytes(content);
             return System.Convert.ToBase64String(plainTextBytes);
         }
-
 
         protected class MockAsyncPageable<T> : AsyncPageable<T>
         {
