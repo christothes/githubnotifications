@@ -24,7 +24,8 @@ namespace GitHubNotifications.Shared
             HtmlUrl = "https://github.com/pr/1234",
             Labels = new List<Label>
             {
-                new Label{ Name = "some label"}
+                new Label{ Name = "some label"},
+                new Label{ Name = "other label"},
             },
             Number = rnd.Next()
         };
@@ -66,6 +67,16 @@ namespace GitHubNotifications.Shared
                 InReplyToId = 0,
                 User = user
             }
+        };
+        public static PullRequestEvent prEventUnLabeled = new PullRequestEvent
+        {
+            Action = "unlabeled",
+            PullRequest = GetPullRequest()
+        };
+        public static PullRequestEvent prEventLabeled = new PullRequestEvent
+        {
+            Action = "labeled",
+            PullRequest = GetPullRequest()
         };
         public static PullRequestEvent prEvent = new PullRequestEvent
         {

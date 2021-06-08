@@ -1,18 +1,18 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Linq.Expressions;
 using System.Net.Http;
+using System.Net.Http.Json;
 using System.Threading.Tasks;
+using Azure;
 using Azure.Data.Tables;
 using GitHubNotifications.Models;
-using Microsoft.AspNetCore.SignalR.Client;
-using System.Net.Http.Json;
-using Microsoft.JSInterop;
-using System.Linq.Expressions;
-using Microsoft.AspNetCore.Components;
-using Azure;
-using Microsoft.AspNetCore.Components.Authorization;
-using System.Linq;
 using GitHubNotifications.Shared;
+using Microsoft.AspNetCore.Components;
+using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.SignalR.Client;
+using Microsoft.JSInterop;
 
 namespace GitHubNotifications.Client
 {
@@ -38,6 +38,17 @@ namespace GitHubNotifications.Client
         {
             get => userOptions.OnlyMyPRs;
             set => userOptions.OnlyMyPRs = (bool)value;
+        }
+        private List<string> _labelFilters = new();
+        private string _labelFilter = "";
+        internal string LabelFilter
+        {
+            get => _labelFilter;
+            set
+            {
+                _labelFilter = value;
+                _labelFilters = value.Split(';', StringSplitOptions.TrimEntries).ToList();
+            }
         }
 
         public DataService(HttpClient httpClient, IJSRuntime jSRuntime, NavigationManager navigationManager, HostAuthenticationStateProvider auth)
@@ -131,6 +142,16 @@ namespace GitHubNotifications.Client
             // onclick happens before the binding is invoked,
             //vso do the opposite of the value.
             userOptions.OnlyMyPRs = !userOptions.OnlyMyPRs;
+            await OptionsChanged();
+        }
+
+        internal async Task OnLabelFilters()
+        {
+            await OptionsChanged();
+        }
+
+        private async Task OptionsChanged()
+        {
             UpdateProgress(0);
             ReportProgress();
             await Http.PostAsJsonAsync("user/SetOptions", userOptions);
@@ -168,13 +189,19 @@ namespace GitHubNotifications.Client
             Console.WriteLine(progressVal);
             var comments = new List<ClientComment>();
             var ago = DateTime.UtcNow.AddDays(-7);
-            Expression<Func<PRComment, bool>> filter = c => c.Created >= ago;
-            if (userOptions?.OnlyMyPRs ?? false)
+            Expression<Func<PRComment, bool>> filter = (userOptions?.OnlyMyPRs ?? false) switch
             {
-                filter = c => c.Created >= ago && c.PartitionKey == userLogin;
-            }
+                false => c => c.Created >= ago,
+                true => c => c.Created >= ago && c.PartitionKey == userLogin,
+            };
+            bool hasLabelFilters = _labelFilters.Any();
+
             await foreach (PRComment comment in tableClient.QueryAsync<PRComment>(filter))
             {
+                if (hasLabelFilters && !_labelFilters.Any(f => comment.Labels.Contains(f)))
+                {
+                    continue;
+                }
                 var cc = new ClientComment
                 {
                     prAuthor = comment.PartitionKey,

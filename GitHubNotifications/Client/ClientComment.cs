@@ -18,6 +18,7 @@ namespace GitHubNotifications.Client
         public Dictionary<string, ClientComment> replies { get; set; }
         public DateTime sortDate { get; set; }
         public DateTime updated { get; set; }
+        public string labels { get; set; }
         public bool isEdited => updated != default && updated != created;
     }
 }

@@ -34,9 +34,21 @@ namespace GitHubNotifications.Shared
 
         [JsonPropertyName("prNumber")]
         public string PrNumber { get; set; }
+        public string Labels { get; set; }
 
 
-        public CommentModel(string id, string user, string uri, DateTime created, string prTitle, string prNumber, string prAuthor, string body, string parentId, string parentAuthor)
+        public CommentModel(
+            string id,
+            string user,
+            string uri,
+            DateTime created,
+            string prTitle,
+            string prNumber,
+            string prAuthor,
+            string body,
+            string parentId,
+            string parentAuthor,
+            string labels)
         {
             Id = id;
             Author = user;
@@ -48,6 +60,7 @@ namespace GitHubNotifications.Shared
             Body = body;
             ParentId = parentId;
             ParentAuthor = parentAuthor;
+            Labels = labels;
         }
     }
 }

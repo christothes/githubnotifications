@@ -1,10 +1,10 @@
-﻿using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
+﻿using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.SignalR;
 using GitHubNotifications.Models;
-using System.Linq;
 using GitHubNotifications.Shared;
+using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace GitHubNotifications.Server
 {
@@ -34,7 +34,8 @@ namespace GitHubNotifications.Server
                 evt.PullRequest.User.Login,
                 evt.Comment.Body,
                 evt.Comment.InReplyToId.ToString(),
-                "");
+                "",
+                string.Join(";", evt.PullRequest.Labels.Select(l => l.Name)));
 
             await _hubContext.Clients.All.SendAsync(
                 "NewComment", model);
@@ -54,7 +55,8 @@ namespace GitHubNotifications.Server
                 evt.Issue.User.Login,
                 evt.Comment.Body,
                 evt.Comment.InReplyToId.ToString(),
-                "");
+                "",
+                string.Join(";", evt.Issue.Labels.Select(l => l.Name)));
 
             await _hubContext.Clients.All.SendAsync(
                 "NewComment", model);

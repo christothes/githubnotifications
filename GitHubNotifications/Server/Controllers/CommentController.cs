@@ -47,7 +47,8 @@ namespace GitHubNotifications.Server
         [HttpPost]
         public async Task<IActionResult> TestEvent(Dictionary<string, JsonElement> jsonPayload)
         {
-            if (User.GetGitHubLogin() != "christothes"){
+            if (User.GetGitHubLogin() != "christothes")
+            {
                 return Unauthorized();
             }
             await _dispatcher.ProcessEvent(jsonPayload);

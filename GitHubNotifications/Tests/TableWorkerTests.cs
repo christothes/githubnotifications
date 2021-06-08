@@ -35,7 +35,7 @@ namespace GitHubNotifications.Tests
         public void Setup()
         {
             commentTableMock = new Mock<TableClient>();
-            commentTableMock.Setup(m => m.QueryAsync<PRComment>(It.IsAny<Expression<Func<PRComment, bool>>>(), null, null, default))
+            commentTableMock.Setup(m => m.QueryAsync<PRComment>(It.IsAny<Expression<Func<PRComment, bool>>>(), null, It.IsAny<IEnumerable<string>>(), default))
                 .Returns(new MockAsyncPageable<PRComment>(prCommentsQueryresponse))
                 .Verifiable();
             tableServiceMock = new Mock<TableServiceClient>();
@@ -80,6 +80,19 @@ namespace GitHubNotifications.Tests
         }
 
         [Test]
+        public async Task PullRequestEventHandlerLabledOrUnLabeled([Values(true, false)] bool labeled)
+        {
+            var pre = labeled ? prEventLabeled : prEventUnLabeled;
+
+            await target.PullRequestEventHandler(pre);
+
+            prsTableMock.Verify();
+            commentTableMock.Verify(m => m.SubmitTransactionAsync(
+                It.Is<IEnumerable<TableTransactionAction>>(a => a.Count() == prCommentsQueryresponse.Count),
+                default), Times.Once);
+        }
+
+        [Test]
         public async Task IssueEventHandler()
         {
             await target.IssueEventHandler(issueEvent);
@@ -105,11 +118,9 @@ namespace GitHubNotifications.Tests
                     default,
                     default), Times.Once);
                 prsTableMock.Verify();
-                commentTableMock.Verify(m => m.DeleteEntityAsync(
-                    It.IsAny<string>(),
-                    It.IsAny<string>(),
-                    default,
-                    default), Times.Exactly(prCommentsQueryresponse.Count));
+                commentTableMock.Verify(m => m.SubmitTransactionAsync(
+                    It.Is<IEnumerable<TableTransactionAction>>(a => a.Count() == prCommentsQueryresponse.Count),
+                    default), Times.Once);
             }
             else
             {
