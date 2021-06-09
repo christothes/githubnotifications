@@ -13,10 +13,10 @@ namespace GitHubNotifications.Server
     public class EventDispatcher
     {
         private readonly ILogger<EventDispatcher> _logger;
-        internal ConcurrentBag<Func<PullRequestReviewEvent, Task>> reviewEventSubscribers = new ConcurrentBag<Func<PullRequestReviewEvent, Task>>();
+        internal ConcurrentBag<Func<PullRequestReviewCommentEvent, Task>> reviewEventSubscribers = new ConcurrentBag<Func<PullRequestReviewCommentEvent, Task>>();
         internal ConcurrentBag<Func<PullRequestEvent, Task>> prEventSubscribers = new ConcurrentBag<Func<PullRequestEvent, Task>>();
         internal ConcurrentBag<Func<CheckSuiteEvent, Task>> checkEventSubscribers = new ConcurrentBag<Func<CheckSuiteEvent, Task>>();
-        internal ConcurrentBag<Func<IssueEvent, Task>> issueEventSubscribers = new ConcurrentBag<Func<IssueEvent, Task>>();
+        internal ConcurrentBag<Func<IssueCommentEvent, Task>> issueEventSubscribers = new ConcurrentBag<Func<IssueCommentEvent, Task>>();
 
         protected EventDispatcher() { }
 
@@ -25,7 +25,7 @@ namespace GitHubNotifications.Server
             _logger = logger;
         }
 
-        public void Register(Func<PullRequestReviewEvent, Task> func)
+        public void Register(Func<PullRequestReviewCommentEvent, Task> func)
         {
             reviewEventSubscribers.Add(func);
         }
@@ -39,7 +39,7 @@ namespace GitHubNotifications.Server
         {
             checkEventSubscribers.Add(func);
         }
-        public void Register(Func<IssueEvent, Task> func)
+        public void Register(Func<IssueCommentEvent, Task> func)
         {
             issueEventSubscribers.Add(func);
         }
@@ -47,10 +47,10 @@ namespace GitHubNotifications.Server
         {
             var tasks = evt switch
             {
-                PullRequestReviewEvent r => reviewEventSubscribers.ToList().Select(f => f(r)),
+                PullRequestReviewCommentEvent r => reviewEventSubscribers.ToList().Select(f => f(r)),
                 PullRequestEvent pr => prEventSubscribers.ToList().Select(f => f(pr)),
                 CheckSuiteEvent c => checkEventSubscribers.ToList().Select(f => f(c)),
-                IssueEvent i => issueEventSubscribers.ToList().Select(f => f(i)),
+                IssueCommentEvent i => issueEventSubscribers.ToList().Select(f => f(i)),
                 _ => throw new InvalidOperationException($"Event handler uknknow: {evt.GetType().FullName}")
             };
             await Task.WhenAll(tasks);
@@ -82,8 +82,9 @@ namespace GitHubNotifications.Server
                         {
                             "check_suite" => typeof(CheckSuiteEvent),
                             "pull_request" => typeof(PullRequestEvent),
-                            "pull_request_review_comment" => typeof(PullRequestReviewEvent),
-                            "issue_comment" => typeof(IssueEvent),
+                            "pull_request_review_comment" => typeof(PullRequestReviewCommentEvent),
+                            "issue_comment" => typeof(IssueCommentEvent),
+                            //"pull_request_review" => typeof(PullRequestReviewEvent),
                             _ => null,
                         };
                         if (webhookType == null)

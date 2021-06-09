@@ -46,7 +46,7 @@ namespace GitHubNotifications.Shared
             }
         };
 
-        public static IssueEvent issueEvent = new IssueEvent()
+        public static IssueCommentEvent issueEvent = new IssueCommentEvent()
         {
             Issue = new Issue
             {
@@ -87,7 +87,7 @@ namespace GitHubNotifications.Shared
             Action = "closed",
             PullRequest = GetPullRequest(true),
         };
-        public static PullRequestReviewEvent prCommentEvent = new PullRequestReviewEvent
+        public static PullRequestReviewCommentEvent prCommentEvent = new PullRequestReviewCommentEvent
         {
             PullRequest = GetPullRequest(),
             Comment = new Comment

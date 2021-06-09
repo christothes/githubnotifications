@@ -30,7 +30,7 @@ namespace GitHubNotifications.Server
             labelTable.CreateIfNotExists();
         }
 
-        protected internal override async Task PrCommentEventHandler(PullRequestReviewEvent evt)
+        protected internal override async Task PrCommentEventHandler(PullRequestReviewCommentEvent evt)
         {
             await prTable.UpsertEntityAsync(
                 new PREntity
@@ -126,7 +126,7 @@ namespace GitHubNotifications.Server
             }
         }
 
-        protected internal override async Task IssueEventHandler(IssueEvent evt)
+        protected internal override async Task IssueEventHandler(IssueCommentEvent evt)
         {
             await commentTable.UpsertEntityAsync(new PRComment(evt), TableUpdateMode.Replace, cancellationToken: _token);
         }

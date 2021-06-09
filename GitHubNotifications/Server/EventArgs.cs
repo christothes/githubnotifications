@@ -13,11 +13,11 @@ namespace GitHubNotifications.Server
     }
     public class PRCommentEventArgs : EventArgs
     {
-        public PRCommentEventArgs(PullRequestReviewEvent reviewEvent)
+        public PRCommentEventArgs(PullRequestReviewCommentEvent reviewEvent)
         {
             Event = reviewEvent;
         }
-        public PullRequestReviewEvent Event { get; }
+        public PullRequestReviewCommentEvent Event { get; }
     }
     public class CheckSuiteEventArgs : EventArgs
     {

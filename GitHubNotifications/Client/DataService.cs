@@ -47,6 +47,7 @@ namespace GitHubNotifications.Client
             set
             {
                 userOptions.Labels = value;
+                
             }
         }
 
@@ -91,6 +92,11 @@ namespace GitHubNotifications.Client
                 Console.WriteLine($"Received comment id: {comment.id}");
                 if (OnlyMyPRs && comment.prAuthor != userLogin)
                 {
+                    return;
+                }
+                if (_labelFilters.Any() && !_labelFilters.Any(f => comment.labels.Contains(f)))
+                {
+                    Console.WriteLine($"Comment with labels {comment.labels}, with filters {string.Join(";", _labelFilters)}");
                     return;
                 }
 
@@ -192,6 +198,7 @@ namespace GitHubNotifications.Client
 
         private async Task LoadComments()
         {
+            _labelFilters = LabelFilter.Split(';', StringSplitOptions.TrimEntries).ToList();
             commentLookup.Clear();
             UpdateProgress(Math.Max(75, progressVal + 20));
             ReportProgress();

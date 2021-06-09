@@ -1,9 +1,9 @@
-﻿using Azure;
-using Azure.Data.Tables;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json.Serialization;
+using Azure;
+using Azure.Data.Tables;
 
 namespace GitHubNotifications.Models
 {
@@ -35,7 +35,7 @@ namespace GitHubNotifications.Models
 
         public PRComment() { }
 
-        public PRComment(PullRequestReviewEvent pr)
+        public PRComment(PullRequestReviewCommentEvent pr)
         {
             PartitionKey = pr.PullRequest.User.Login;
             RowKey = pr.Comment.Id.ToString();
@@ -50,7 +50,7 @@ namespace GitHubNotifications.Models
             Labels = string.Join(";", pr.PullRequest.Labels.Select(l => l.Name));
         }
 
-        public PRComment(IssueEvent i)
+        public PRComment(IssueCommentEvent i)
         {
             PartitionKey = i.Issue.User.Login;
             RowKey = i.Comment.Id.ToString();
@@ -1186,7 +1186,7 @@ namespace GitHubNotifications.Models
         public long InReplyToId { get; set; }
     }
 
-    public class PullRequestReviewEvent : ICommentEvent
+    public class PullRequestReviewCommentEvent : ICommentEvent
     {
         [JsonPropertyName("action")]
         public string Action { get; set; }
@@ -1306,7 +1306,7 @@ namespace GitHubNotifications.Models
         public string PatchUrl { get; set; }
     }
 
-    public class IssueEvent : ICommentEvent
+    public class IssueCommentEvent : ICommentEvent
     {
         [JsonPropertyName("action")]
         public string Action { get; set; }
@@ -1322,6 +1322,11 @@ namespace GitHubNotifications.Models
 
         [JsonPropertyName("sender")]
         public Sender Sender { get; set; }
+    }
+
+    public class PullRequestReviewEvent
+    {
+        
     }
 
     public interface ICommentEvent

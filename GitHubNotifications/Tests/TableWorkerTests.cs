@@ -57,8 +57,8 @@ namespace GitHubNotifications.Tests
         {
             var source = new CancellationTokenSource();
             Func<PullRequestEvent, Task> prFunc = target.PullRequestEventHandler;
-            Func<PullRequestReviewEvent, Task> commentFunc = target.PrCommentEventHandler;
-            Func<IssueEvent, Task> issueFunc = target.IssueEventHandler;
+            Func<PullRequestReviewCommentEvent, Task> commentFunc = target.PrCommentEventHandler;
+            Func<IssueCommentEvent, Task> issueFunc = target.IssueEventHandler;
             Func<CheckSuiteEvent, Task> checkFunc = target.CheckSuiteEventHandler;
 
             await target.StartAsync(source.Token);

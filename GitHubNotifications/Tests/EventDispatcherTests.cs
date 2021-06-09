@@ -20,9 +20,9 @@ namespace GitHubNotifications.Tests
         bool reviewEventCalled = false;
         bool issueEventCalled = false;
         bool checkEventCalled = false;
-        Func<PullRequestReviewEvent, Task> commentFunc;
+        Func<PullRequestReviewCommentEvent, Task> commentFunc;
         Func<PullRequestEvent, Task> prFunc;
-        Func<IssueEvent, Task> issueFunc;
+        Func<IssueCommentEvent, Task> issueFunc;
         Func<CheckSuiteEvent, Task> checkFunc;
 
         [SetUp]

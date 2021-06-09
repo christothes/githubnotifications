@@ -34,9 +34,9 @@ namespace GitHubNotifications.Server
             return Task.CompletedTask;
         }
 
-        protected internal abstract Task PrCommentEventHandler(PullRequestReviewEvent evt);
+        protected internal abstract Task PrCommentEventHandler(PullRequestReviewCommentEvent evt);
         protected internal abstract Task PullRequestEventHandler(PullRequestEvent evt);
-        protected internal abstract Task IssueEventHandler(IssueEvent evt);
+        protected internal abstract Task IssueEventHandler(IssueCommentEvent evt);
         protected internal abstract Task CheckSuiteEventHandler(CheckSuiteEvent evt);
 
         public void Dispose()
