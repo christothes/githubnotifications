@@ -11,6 +11,7 @@ using GitHubNotifications.Models;
 using GitHubNotifications.Shared;
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.JSInterop;
 
@@ -40,14 +41,12 @@ namespace GitHubNotifications.Client
             set => userOptions.OnlyMyPRs = (bool)value;
         }
         private List<string> _labelFilters = new();
-        private string _labelFilter = "";
         internal string LabelFilter
         {
-            get => _labelFilter;
+            get => userOptions.Labels;
             set
             {
-                _labelFilter = value;
-                _labelFilters = value.Split(';', StringSplitOptions.TrimEntries).ToList();
+                userOptions.Labels = value;
             }
         }
 
@@ -123,6 +122,7 @@ namespace GitHubNotifications.Client
                 ReportProgress();
                 Console.WriteLine(progressVal);
                 OnlyMyPRs = userOptions?.OnlyMyPRs ?? true;
+                LabelFilter = userOptions?.Labels;
                 var url = new Uri(stringResult);
                 tableClient = new TableClient(url, new AzureSasCredential(url.Query), null);
                 await LoadComments();
@@ -140,22 +140,31 @@ namespace GitHubNotifications.Client
         internal async Task OnlyMyPRsClick()
         {
             // onclick happens before the binding is invoked,
-            //vso do the opposite of the value.
+            // so do the opposite of the value.
             userOptions.OnlyMyPRs = !userOptions.OnlyMyPRs;
             await OptionsChanged();
         }
-
         internal async Task OnLabelFilters()
         {
+            _labelFilters = LabelFilter.Split(';', StringSplitOptions.TrimEntries).ToList();
             await OptionsChanged();
+        }
+        internal async Task OnLabelFiltersEnter(KeyboardEventArgs e)
+        {
+            if (e.Code == "Enter" || e.Code == "NumpadEnter")
+            {
+                {
+                    await OnLabelFilters();
+                }
+            }
         }
 
         private async Task OptionsChanged()
         {
-            UpdateProgress(0);
+            UpdateProgress(5);
             ReportProgress();
             await Http.PostAsJsonAsync("user/SetOptions", userOptions);
-            UpdateProgress(10);
+            UpdateProgress(15);
             ReportProgress();
             await LoadComments();
             UpdateProgress(0);
@@ -215,7 +224,8 @@ namespace GitHubNotifications.Client
                     title = comment.PrTitle,
                     prNumber = comment.PrNumber,
                     uri = comment.Uri,
-                    sortDate = comment.Created.ToLocalTime()
+                    sortDate = comment.Created.ToLocalTime(),
+                    labels = comment.Labels
                 };
 
                 comments.Add(cc);

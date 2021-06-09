@@ -1,5 +1,12 @@
 ﻿<div class="list-group-item">
     <div>
+        @if(Comment.labels != null && Comment.labels.Length > 0)
+        {
+            @foreach (string label in Comment.labels.Split(';')){
+                <span class="badge badge-pill badge-secondary">@label</span>
+            }
+            <br>
+        }
         <strong><a href="@Comment.uri" target="_blank">@Comment.title</a><br />
         @at@Comment.author</strong> - 
         @if (@Comment.isEdited)

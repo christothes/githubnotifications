@@ -10,16 +10,25 @@
         <div class="progress" style="height: 5px;  visibility: @DataService.IsInProgress;">
             <div class="progress-bar" role="progressbar" style="width: @DataService.Progress;"></div>
         </div>
-        <div class="custom-control custom-switch">
-            <input type="checkbox" id="prOption" class="custom-control-input" @bind="DataService.OnlyMyPRs"
-                @onclick="DataService.OnlyMyPRsClick">
-            <label class="custom-control-label" for="prOption">Show only my PRs</label>
-        </div>
-        <div class="form-group col-md-6">
-            <label for="labels">Filter By Label(s)</label>
-            <input type="text" class="form-control" id="labels" @bind="DataService.LabelFilter" @onfocusout="DataService.OnLabelFilters">
-        </div>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="custom-control custom-switch">
+                        <input type="checkbox" id="prOption" class="custom-control-input" @bind="DataService.OnlyMyPRs"
+                            @onclick="DataService.OnlyMyPRsClick">
+                        <label class="custom-control-label" for="prOption">Show only my PRs</label>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="input-group mb-3">
+                    <input type="text" class="form-control" placeholder="Add a label name here to filter" aria-label="Label filters" @bind="DataService.LabelFilter">
+                    <div class="input-group-append">
+                        <button class="btn btn-outline-secondary" type="button" id="button-addon2" @onclick="DataService.OnLabelFilters">Apply</button>
+                    </div>
+                </div>
+            </div>
         <div>
+            <br>
             <h3>Check Failures</h3>
             <ul id="messagesList">
                 @foreach (var message in DataService.checks)
