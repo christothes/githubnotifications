@@ -93,6 +93,14 @@ namespace GitHubNotifications.Server
                             continue;
                         }
                         var webhookObj = JsonSerializer.Deserialize(decoded, webhookType);
+                        var logMsg = webhookObj switch
+                        {
+                            PullRequestReviewCommentEvent e => $"{nameof(e)} action: '{e.Action}'",
+                            PullRequestEvent e => $"{nameof(e)} action: '{e.Action}'",
+                            CheckSuiteEvent e => $"{nameof(e)} action: '{e.Action}'",
+                            IssueCommentEvent e => $"{nameof(e)} action: '{e.Action}'",
+                            _ => "unknown event type"
+                        };
                         await FireEvent(webhookObj);
                     }
                 }

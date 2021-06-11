@@ -22,7 +22,7 @@ namespace GitHubNotifications.Server
 
         protected internal override async Task PrCommentEventHandler(PullRequestReviewCommentEvent evt)
         {
-            _logger.LogInformation($"{evt.Comment.CreatedAt.ToLocalTime()} PRComment Url: {evt.Comment.HtmlUrl}");
+            _logger.LogInformation($"{evt.Comment.CreatedAt.ToLocalTime()} PRComment Url: {evt.Comment.HtmlUrl} PR: {evt.PullRequest.HtmlUrl}");
 
             var model = new CommentModel(
                 evt.Comment.Id.ToString(),
@@ -43,7 +43,7 @@ namespace GitHubNotifications.Server
 
         protected internal override async Task IssueEventHandler(IssueCommentEvent evt)
         {
-            _logger.LogInformation($"{evt.Comment.CreatedAt.ToLocalTime()} PRComment Url: {evt.Comment.HtmlUrl}");
+            _logger.LogInformation($"{evt.Comment.CreatedAt.ToLocalTime()} IssueComment Url: {evt.Comment.HtmlUrl} Issue: {evt.Issue.HtmlUrl}");
 
             var model = new CommentModel(
                 evt.Comment.Id.ToString(),
@@ -64,10 +64,6 @@ namespace GitHubNotifications.Server
 
         protected internal override async Task CheckSuiteEventHandler(CheckSuiteEvent evt)
         {
-            if (evt.CheckSuite.Conclusion != "failure")
-            {
-                return;
-            }
             PullRequest prDetails;
             try
             {
@@ -75,14 +71,18 @@ namespace GitHubNotifications.Server
             }
             catch
             {
-                _logger.LogWarning("*** Could not find PR in cache ***");
+                _logger.LogWarning($"Could not find PR in cache for check {evt.CheckSuite.CheckRunsUrl}");
                 return;
             }
             var subject = $"Checks {evt.CheckSuite.Conclusion} for PR: {prDetails.Title}";
             var plainTextContent = $"PR: {prDetails.Url}";
 
             _logger.LogInformation(subject);
-            _logger.LogInformation(plainTextContent);
+
+            if (evt.CheckSuite.Conclusion != "failure")
+            {
+                return;
+            }
 
             await _hubContext.Clients.All.SendAsync(
                 "CheckStatus",
@@ -96,7 +96,7 @@ namespace GitHubNotifications.Server
 
         protected internal override Task PullRequestEventHandler(PullRequestEvent evt)
         {
-            throw new System.NotImplementedException();
+            return Task.CompletedTask;
         }
     }
 }
