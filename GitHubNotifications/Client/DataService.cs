@@ -33,7 +33,7 @@ namespace GitHubNotifications.Client
         private int progressVal = 0;
         internal string IsInProgress => progressVal == 0 || progressVal >= 100 ? "collapse" : "visible";
         internal string Progress = "0%";
-        internal List<string> checks = new();
+        internal List<ClientCheck> checks = new();
         internal Dictionary<string, ClientComment> commentLookup = new();
         internal bool OnlyMyPRs
         {
@@ -47,7 +47,7 @@ namespace GitHubNotifications.Client
             set
             {
                 userOptions.Labels = value;
-                
+
             }
         }
 
@@ -75,14 +75,16 @@ namespace GitHubNotifications.Client
                 .WithAutomaticReconnect()
                 .Build();
 
-            hubConnection.On<DateTime, string, string, string, string, string>("CheckStatus", async (updated, id, title, message, url, author) =>
+            hubConnection.On<DateTime, string, string, string, string, string>("CheckStatus", async (updated, id, title, conclusion, url, author) =>
             {
                 Console.WriteLine($"{title}");
-                if (author == userLogin)
+                var check = new ClientCheck { updated = updated, id = id, title = title, conclusion = conclusion, url = url, author = author };
+
+                if (author == userLogin && conclusion == "failure")
                 {
-                    var encodedMsg = $"{updated.ToLocalTime().ToString("h:mm tt")}: {title}";
-                    checks.Add(encodedMsg);
-                    await CreateNotifcationAsync(updated.ToLocalTime(), id, title, message, url);
+                    check.updated = updated.ToLocalTime();
+                    checks.Add(check);
+                    await CreateNotifcationAsync(updated.ToLocalTime(), id, title, $"Check {conclusion} for PR: {title}", url);
                     ReportProgress();
                 }
             });

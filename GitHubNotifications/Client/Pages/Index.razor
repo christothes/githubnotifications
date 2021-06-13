@@ -31,9 +31,9 @@
             <br>
             <h3>Check Failures</h3>
             <ul id="messagesList">
-                @foreach (var message in DataService.checks)
+                @foreach (var check in DataService.checks.OrderByDescending(c => c.updated))
                 {
-                <li>@message</li>
+                <li>Check @check.conclusion for PR: <strong><a href="@check.url" target="_blank">@check.title</a></strong> - @check.updated.ToString("h:mm tt")</li>
                 }
             </ul>
         </div>
@@ -56,6 +56,7 @@
 
 @code {
     private string permission;
+    private const string at = "@";
     protected override async Task OnInitializedAsync()
     {
         @* var AuthState = await AuthStateProvider.GetAuthenticationStateAsync(); *@

@@ -88,22 +88,16 @@ namespace GitHubNotifications.Server
                 _logger.LogWarning($"Could not find PR in cache for check {evt.CheckSuite.CheckRunsUrl}");
                 return;
             }
-            var subject = $"Checks {evt.CheckSuite.Conclusion} for PR: {prDetails.Title}";
-            var plainTextContent = $"PR: {prDetails.Url}";
+            var conclusion = evt.CheckSuite.Conclusion;
 
-            _logger.LogInformation(subject);
-
-            if (evt.CheckSuite.Conclusion != "failure")
-            {
-                return;
-            }
+            
 
             await _hubContext.Clients.All.SendAsync(
                 "CheckStatus",
                 evt.CheckSuite.UpdatedAt.ToLocalTime(),
                 evt.CheckSuite.Id.ToString(),
-                subject,
-                plainTextContent,
+                prDetails.Title,
+                conclusion,
                 prDetails.Url,
                 prDetails.Author);
         }
