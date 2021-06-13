@@ -255,15 +255,16 @@ namespace GitHubNotifications.Client
 
         private void AddComment(ClientComment comment)
         {
-            comment.sortDate = comment.created.ToLocalTime();
-            comment.created = comment.sortDate;
+            comment.created = comment.created.ToLocalTime();
+            comment.updated = comment.updated.ToLocalTime();
+            comment.sortDate = comment.updated;
             if (comment.parentId != "0" && comment.parentId != null && commentLookup.TryGetValue(comment.parentId, out var parent))
             {
                 parent.replies ??= new Dictionary<string, ClientComment>();
                 parent.replies[comment.id] = comment;
-                if (comment.created > parent.sortDate)
+                if (comment.sortDate > parent.sortDate)
                 {
-                    parent.sortDate = comment.created;
+                    parent.sortDate = comment.sortDate;
                 }
             }
         }
