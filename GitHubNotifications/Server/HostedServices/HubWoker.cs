@@ -33,6 +33,7 @@ namespace GitHubNotifications.Server
                 evt.Comment.Id.ToString(),
                 evt.Comment.User.Login,
                 evt.Comment.HtmlUrl,
+                evt.Comment.CreatedAt,
                 evt.Comment.UpdatedAt,
                 evt.PullRequest.Title,
                 evt.PullRequest.Number.ToString(),
@@ -54,6 +55,7 @@ namespace GitHubNotifications.Server
                 evt.Comment.Id.ToString(),
                 evt.Comment.User.Login,
                 evt.Comment.HtmlUrl,
+                evt.Comment.CreatedAt,
                 evt.Comment.UpdatedAt,
                 evt.Issue.Title,
                 evt.Issue.Number.ToString(),
@@ -94,7 +96,7 @@ namespace GitHubNotifications.Server
 
             await _hubContext.Clients.All.SendAsync(
                 "CheckStatus",
-                evt.CheckSuite.UpdatedAt.ToLocalTime(),
+                evt.CheckSuite.UpdatedAt,
                 evt.CheckSuite.Id.ToString(),
                 prDetails.Title,
                 conclusion,

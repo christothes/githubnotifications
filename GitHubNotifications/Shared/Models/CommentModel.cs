@@ -17,6 +17,9 @@ namespace GitHubNotifications.Shared
         [JsonPropertyName("created")]
         public DateTime Created { get; set; }
 
+        [JsonPropertyName("updated")]
+        public DateTime Updated { get; set; }
+
         [JsonPropertyName("title")]
         public string Title { get; set; }
 
@@ -42,6 +45,7 @@ namespace GitHubNotifications.Shared
             string user,
             string uri,
             DateTime created,
+            DateTime updated,
             string prTitle,
             string prNumber,
             string prAuthor,
@@ -54,6 +58,7 @@ namespace GitHubNotifications.Shared
             Author = user;
             Uri = uri;
             Created = created;
+            Updated = updated;
             Title = prTitle;
             PrNumber = prNumber;
             PrAuthor = prAuthor;

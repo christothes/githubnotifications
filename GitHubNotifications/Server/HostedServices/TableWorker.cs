@@ -47,7 +47,7 @@ namespace GitHubNotifications.Server
             {
                 switch (evt.Action)
                 {
-                    case "closed" when evt.PullRequest.Merged:
+                    case "closed":
                         // Get all the comments to delete.
                         _logger.LogInformation($"Deleting comments for PR {evt.PullRequest.HtmlUrl}");
                         await Actions.AllCommentsForPR(
