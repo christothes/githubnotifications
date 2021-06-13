@@ -20,9 +20,9 @@ namespace GitHubNotifications.Shared
             CheckSuite = new CheckSuite
             {
                 Conclusion = "successs",
-                PullRequests = new List<PullRequest>
+                PullRequests = new List<PullRequestCheck>
                 {
-                    GetPullRequest()
+                    prCheck
                 },
                 HeadSha = "sha",
                 UpdatedAt = DateTime.Now,
@@ -35,9 +35,9 @@ namespace GitHubNotifications.Shared
             CheckSuite = new CheckSuite
             {
                 Conclusion = "failure",
-                PullRequests = new List<PullRequest>
+                PullRequests = new List<PullRequestCheck>
                 {
-                    GetPullRequest()
+                    prCheck
                 },
                 HeadSha = "sha",
                 UpdatedAt = DateTime.Now,
@@ -108,6 +108,15 @@ namespace GitHubNotifications.Shared
             Review = new Review()
         };
         public static User user => new User { Login = "christothes" };
+        public static PullRequestCheck prCheck => new PullRequestCheck
+        {
+            Head = new Head
+            {
+                Repo = repo
+            },
+            Id = 3456,
+            Number = 0897
+        };
         public static PullRequest GetPullRequest(bool merged = false) =>
         new PullRequest
         {

@@ -1,5 +1,7 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
+using Azure.Data.Tables;
 using GitHubNotifications.Models;
 using GitHubNotifications.Shared;
 using Microsoft.AspNetCore.SignalR;
@@ -11,13 +13,16 @@ namespace GitHubNotifications.Server
     public class HubWorker : Worker, IHostedService
     {
         private readonly IHubContext<NotificationsHub> _hubContext;
+        private readonly TableClient prTable;
 
         public HubWorker(
             ILogger<HubWorker> logger,
             EventDispatcher dispatcher,
+            TableServiceClient tableService,
             IHubContext<NotificationsHub> hub) : base(dispatcher, logger)
         {
             _hubContext = hub;
+            prTable = tableService.GetTableClient("prs");
         }
 
         protected internal override async Task PullRequestReviewCommentEventHandler(PullRequestReviewCommentEvent evt)
@@ -64,10 +69,19 @@ namespace GitHubNotifications.Server
 
         protected internal override async Task CheckSuiteEventHandler(CheckSuiteEvent evt)
         {
-            PullRequest prDetails;
+            PREntity prDetails;
             try
             {
-                prDetails = evt.CheckSuite.PullRequests.FirstOrDefault();
+                var pr = evt.CheckSuite.PullRequests.FirstOrDefault();
+                if (pr != null)
+                {
+                    prDetails = await prTable.GetEntityAsync<PREntity>(pr.Head.Repo.Name, pr.Number.ToString());
+                }
+                else
+                {
+                    evt.CheckSuite.PullRequests.FirstOrDefault();
+                    throw new Exception("Could not find PR");
+                }
             }
             catch
             {
@@ -91,7 +105,7 @@ namespace GitHubNotifications.Server
                 subject,
                 plainTextContent,
                 prDetails.Url,
-                prDetails.User.Login);
+                prDetails.Author);
         }
 
         protected internal override Task PullRequestEventHandler(PullRequestEvent evt)

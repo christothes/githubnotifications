@@ -50,11 +50,6 @@ namespace GitHubNotifications.Tests
             target = new TableWorker(loggerMock, dispatcher, tableServiceMock.Object);
         }
 
-        [TearDown]
-        public void TearDown()
-        {
-        }
-
         [Test]
         public async Task Startup()
         {

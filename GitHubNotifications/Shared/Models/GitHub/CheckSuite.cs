@@ -34,7 +34,7 @@ namespace GitHubNotifications.Models
         public object After { get; set; }
 
         [JsonPropertyName("pull_requests")]
-        public List<PullRequest> PullRequests { get; set; }
+        public List<PullRequestCheck> PullRequests { get; set; }
 
         [JsonPropertyName("app")]
         public App App { get; set; }
