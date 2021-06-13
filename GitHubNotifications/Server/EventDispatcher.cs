@@ -88,6 +88,7 @@ namespace GitHubNotifications.Server
                     if (element.Key == "content")
                     {
                         decoded = Encoding.UTF8.GetString(Convert.FromBase64String(element.Value.GetString()));
+                        _logger.LogInformation(decoded);
                         Type webhookType = eventType switch
                         {
                             "check_suite" => typeof(CheckSuiteEvent),
@@ -114,6 +115,7 @@ namespace GitHubNotifications.Server
                             PullRequestReviewEvent e => $"{nameof(e)} action: '{e.Action}'",
                             _ => "unknown event type"
                         };
+                        _logger.LogInformation(logMsg);
                         await FireEvent(webhookObj);
                     }
                 }
