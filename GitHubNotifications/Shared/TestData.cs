@@ -73,6 +73,12 @@ namespace GitHubNotifications.Shared
             PullRequest = GetPullRequest(),
             Repository = repo
         };
+         public static PullRequestEvent prClosedEvent = new PullRequestEvent
+        {
+            Action = "closed",
+            PullRequest = GetPullRequest(false),
+            Repository = repo
+        };
         public static PullRequestEvent prMergedEvent = new PullRequestEvent
         {
             Action = "closed",

@@ -52,7 +52,7 @@ namespace GitHubNotifications.Server
                         _logger.LogInformation($"Deleting comments for PR {evt.PullRequest.HtmlUrl}");
                         await Actions.AllCommentsForPR(
                             (c, pr) => new TableTransactionAction(TableTransactionActionType.Delete, c),
-                            evt.PullRequest, commentTable);
+                            evt.PullRequest, commentTable, _logger);
                         break;
                     case "labeled":
                     case "unlabeled":
@@ -64,7 +64,7 @@ namespace GitHubNotifications.Server
                             {
                                 c.Labels = labels;
                                 return new TableTransactionAction(TableTransactionActionType.UpdateMerge, c);
-                            }, evt.PullRequest, commentTable);
+                            }, evt.PullRequest, commentTable, _logger);
                         break;
                     case "review_requested":
                         break;

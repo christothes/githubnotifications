@@ -5,12 +5,13 @@ using System.Threading.Tasks;
 using Azure;
 using Azure.Data.Tables;
 using GitHubNotifications.Models;
+using Microsoft.Extensions.Logging;
 
 namespace GitHubNotifications.Server
 {
     public static class Actions
     {
-        public static async Task<bool> AllCommentsForPR(Func<PRComment, PullRequest, TableTransactionAction> action, PullRequest pr, TableClient commentTable)
+        public static async Task<bool> AllCommentsForPR(Func<PRComment, PullRequest, TableTransactionAction> action, PullRequest pr, TableClient commentTable, ILogger logger)
         {
             var actions = new List<TableTransactionAction>();
             var number = pr.Number.ToString();
@@ -18,16 +19,18 @@ namespace GitHubNotifications.Server
             {
                 actions.Add(action(comment, pr));
             }
-            await ExecuteActionsAsBatch(actions, commentTable);
+            await ExecuteActionsAsBatch(actions, commentTable, logger);
             return true;
         }
 
-        private static async Task ExecuteActionsAsBatch(List<TableTransactionAction> actions, TableClient commentTable)
+        private static async Task ExecuteActionsAsBatch(List<TableTransactionAction> actions, TableClient commentTable, ILogger logger)
         {
             int skip = 0;
             while (skip < actions.Count)
             {
+                logger.LogInformation($"Submitting transactions with skip: {skip}, Count: {actions.Skip(skip).Take(100).Count()}");
                 await commentTable.SubmitTransactionAsync(actions.Skip(skip).Take(100));
+                logger.LogInformation($"Submitted transactions with skip: {skip}, Count: {actions.Skip(skip).Take(100).Count()}");
                 skip += 100;
             }
         }

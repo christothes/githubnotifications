@@ -67,14 +67,19 @@ namespace GitHubNotifications.Tests
             Assert.AreEqual(checkFunc, dispatcher.checkEventSubscribers.FirstOrDefault());
         }
 
-        [Test]
-        public async Task TableWorker_PullRequestEventHandler([Values(true, false)] bool merged)
+        public static IEnumerable<object[]> PrEventTests()
         {
-            var pre = merged ? prMergedEvent : prEvent;
+            yield return new object[] { prEvent, false };
+            yield return new object[] { prClosedEvent, true };
+            yield return new object[] { prMergedEvent, true };
+        }
 
+        [TestCaseSource(nameof(PrEventTests))]
+        public async Task TableWorker_PullRequestEventHandler(PullRequestEvent pre, bool closed)
+        {
             await target.PullRequestEventHandler(pre);
 
-            ValidateTable(merged, pre);
+            ValidateTable(closed, pre);
         }
 
         [Test]
@@ -110,18 +115,16 @@ namespace GitHubNotifications.Tests
             commentTableMock.Verify(m => m.UpsertEntityAsync(It.IsAny<PRComment>(), TableUpdateMode.Replace, default));
         }
 
-        private void ValidateTable(bool merged, PullRequestEvent pre)
+        private void ValidateTable(bool closed, PullRequestEvent pre)
         {
             prsTableMock.Verify(m => m.UpsertEntityAsync(
                 It.Is<PREntity>(e => e.PartitionKey == prEvent.Repository.Name), TableUpdateMode.Replace, default));
-
-            if (merged)
             {
                 commentTableMock.Verify(m => m.SubmitTransactionAsync(
                     It.Is<IEnumerable<TableTransactionAction>>(
                         a => a.Count() == 100 &&
                         a.All(i => i.ActionType == TableTransactionActionType.Delete)),
-                    default), Times.Exactly(2));
+                    default), closed ? Times.Exactly(2) : Times.Never());
             }
         }
 
