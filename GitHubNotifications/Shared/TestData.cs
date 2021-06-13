@@ -19,7 +19,7 @@ namespace GitHubNotifications.Shared
             Action = "check_suite",
             CheckSuite = new CheckSuite
             {
-                Conclusion = "successs",
+                Conclusion = "success",
                 PullRequests = new List<PullRequestCheck>
                 {
                     prCheck

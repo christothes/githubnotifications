@@ -72,8 +72,8 @@ namespace GitHubNotifications.Tests
             await target.CheckSuiteEventHandler(evt);
             hubMock.Verify(m => m.Clients.All.SendCoreAsync(
                 "CheckStatus",
-                It.Is<object[]>(oo => oo.Length == 6),
-                default), success ? Times.Never : Times.Once);
+                It.Is<object[]>(oo => oo.Length == 6 && oo.Contains(success ? "success" : "failure")),
+                default), Times.Once);
         }
 
         private void ValidateHub(ICommentEvent commentEvent)
