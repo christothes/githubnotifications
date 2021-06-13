@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Azure;
 using GitHubNotifications.Models;
 using GitHubNotifications.Shared;
+using Microsoft.Extensions.Logging;
 
 namespace GitHubNotifications.Tests
 {
@@ -15,32 +16,44 @@ namespace GitHubNotifications.Tests
         {
             yield return new object[]{new Dictionary<string, object>
             {
-                {"headers", new GitHubEvent{ XGitHubEvent = new[]{"issue_comment"} }},
+                {"headers", new GitHubEventEnvelope{ XGitHubEvent = new[]{"issue_comment"} }},
+                {"content", TestData.issueCommentEvent}
+            }};
+
+            yield return new object[]{new Dictionary<string, object>
+            {
+                {"headers", new GitHubEventEnvelope{ XGitHubEvent = new[]{"issues"} }},
                 {"content", TestData.issueEvent}
             }};
 
             yield return new object[]{new Dictionary<string, object>
             {
-                {"headers", new GitHubEvent{ XGitHubEvent = new[]{"pull_request_review_comment"} }},
+                {"headers", new GitHubEventEnvelope{ XGitHubEvent = new[]{"pull_request_review"} }},
+                {"content", TestData.prReviewEvent}
+            }};
+
+            yield return new object[]{new Dictionary<string, object>
+            {
+                {"headers", new GitHubEventEnvelope{ XGitHubEvent = new[]{"pull_request_review_comment"} }},
                 {"content", TestData.prCommentEvent}
             }};
 
             yield return new object[]{new Dictionary<string, object>
             {
-                {"headers", new GitHubEvent{ XGitHubEvent = new[]{"pull_request"} }},
+                {"headers", new GitHubEventEnvelope{ XGitHubEvent = new[]{"pull_request"} }},
                 {"content", TestData.prEvent}
             }};
 
             yield return new object[]{new Dictionary<string, object>
             {
-                {"headers", new GitHubEvent{ XGitHubEvent = new[]{"pull_request"} }},
+                {"headers", new GitHubEventEnvelope{ XGitHubEvent = new[]{"pull_request"} }},
                 {"content", TestData.prMergedEvent}
             }};
 
             yield return new object[]{new Dictionary<string, object>
             {
-                {"headers", new GitHubEvent{ XGitHubEvent = new[]{"check_suite"} }},
-                {"content", TestData.checkSuiteEvent}
+                {"headers", new GitHubEventEnvelope{ XGitHubEvent = new[]{"check_suite"} }},
+                {"content", TestData.checkSuiteFailedEvent}
             }};
         }
 
@@ -83,6 +96,29 @@ namespace GitHubNotifications.Tests
             public MockPage(IEnumerable<T> items)
             {
                 InnerValues = items.ToList().AsReadOnly();
+            }
+        }
+
+        protected class MockLogger<T> : ILogger<T>
+        {
+            Action<LogLevel> _logLevelAction;
+            public MockLogger(Action<LogLevel> action)
+            {
+                _logLevelAction = action;
+            }
+            public IDisposable BeginScope<TState>(TState state)
+            {
+                throw new NotImplementedException();
+            }
+
+            public bool IsEnabled(LogLevel logLevel)
+            {
+                throw new NotImplementedException();
+            }
+
+            public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter)
+            {
+                _logLevelAction(logLevel);
             }
         }
     }

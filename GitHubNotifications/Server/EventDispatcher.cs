@@ -13,10 +13,12 @@ namespace GitHubNotifications.Server
     public class EventDispatcher
     {
         private readonly ILogger<EventDispatcher> _logger;
-        internal ConcurrentBag<Func<PullRequestReviewCommentEvent, Task>> reviewEventSubscribers = new ConcurrentBag<Func<PullRequestReviewCommentEvent, Task>>();
-        internal ConcurrentBag<Func<PullRequestEvent, Task>> prEventSubscribers = new ConcurrentBag<Func<PullRequestEvent, Task>>();
+        internal ConcurrentBag<Func<PullRequestReviewCommentEvent, Task>> pullRequestReviewCommentEventSubscribers = new ConcurrentBag<Func<PullRequestReviewCommentEvent, Task>>();
+        internal ConcurrentBag<Func<PullRequestReviewEvent, Task>> pullRequestReviewEventSubscribers = new ConcurrentBag<Func<PullRequestReviewEvent, Task>>();
+        internal ConcurrentBag<Func<PullRequestEvent, Task>> pullRequestEventSubscribers = new ConcurrentBag<Func<PullRequestEvent, Task>>();
         internal ConcurrentBag<Func<CheckSuiteEvent, Task>> checkEventSubscribers = new ConcurrentBag<Func<CheckSuiteEvent, Task>>();
-        internal ConcurrentBag<Func<IssueCommentEvent, Task>> issueEventSubscribers = new ConcurrentBag<Func<IssueCommentEvent, Task>>();
+        internal ConcurrentBag<Func<IssueCommentEvent, Task>> issueCommentEventSubscribers = new ConcurrentBag<Func<IssueCommentEvent, Task>>();
+        internal ConcurrentBag<Func<IssueEvent, Task>> issueEventSubscribers = new ConcurrentBag<Func<IssueEvent, Task>>();
 
         protected EventDispatcher() { }
 
@@ -24,33 +26,41 @@ namespace GitHubNotifications.Server
         {
             _logger = logger;
         }
-
+        public void Register(Func<PullRequestReviewEvent, Task> func)
+        {
+            pullRequestReviewEventSubscribers.Add(func);
+        }
         public void Register(Func<PullRequestReviewCommentEvent, Task> func)
         {
-            reviewEventSubscribers.Add(func);
+            pullRequestReviewCommentEventSubscribers.Add(func);
         }
-
         public void Register(Func<PullRequestEvent, Task> func)
         {
-            prEventSubscribers.Add(func);
+            pullRequestEventSubscribers.Add(func);
         }
-
         public void Register(Func<CheckSuiteEvent, Task> func)
         {
             checkEventSubscribers.Add(func);
         }
         public void Register(Func<IssueCommentEvent, Task> func)
         {
+            issueCommentEventSubscribers.Add(func);
+        }
+        public void Register(Func<IssueEvent, Task> func)
+        {
             issueEventSubscribers.Add(func);
         }
+
         internal async Task FireEvent<T>(T evt)
         {
             var tasks = evt switch
             {
-                PullRequestReviewCommentEvent r => reviewEventSubscribers.ToList().Select(f => f(r)),
-                PullRequestEvent pr => prEventSubscribers.ToList().Select(f => f(pr)),
-                CheckSuiteEvent c => checkEventSubscribers.ToList().Select(f => f(c)),
-                IssueCommentEvent i => issueEventSubscribers.ToList().Select(f => f(i)),
+                PullRequestReviewCommentEvent e => pullRequestReviewCommentEventSubscribers.ToList().Select(f => f(e)),
+                PullRequestReviewEvent e => pullRequestReviewEventSubscribers.ToList().Select(f => f(e)),
+                PullRequestEvent e => pullRequestEventSubscribers.ToList().Select(f => f(e)),
+                CheckSuiteEvent e => checkEventSubscribers.ToList().Select(f => f(e)),
+                IssueCommentEvent e => issueCommentEventSubscribers.ToList().Select(f => f(e)),
+                IssueEvent e => issueEventSubscribers.ToList().Select(f => f(e)),
                 _ => throw new InvalidOperationException($"Event handler uknknow: {evt.GetType().FullName}")
             };
             await Task.WhenAll(tasks);
@@ -84,7 +94,8 @@ namespace GitHubNotifications.Server
                             "pull_request" => typeof(PullRequestEvent),
                             "pull_request_review_comment" => typeof(PullRequestReviewCommentEvent),
                             "issue_comment" => typeof(IssueCommentEvent),
-                            //"pull_request_review" => typeof(PullRequestReviewEvent),
+                            "pull_request_review" => typeof(PullRequestReviewEvent),
+                            "issues" => typeof(IssueEvent),
                             _ => null,
                         };
                         if (webhookType == null)
@@ -99,6 +110,8 @@ namespace GitHubNotifications.Server
                             PullRequestEvent e => $"{nameof(e)} action: '{e.Action}'",
                             CheckSuiteEvent e => $"{nameof(e)} action: '{e.Action}'",
                             IssueCommentEvent e => $"{nameof(e)} action: '{e.Action}'",
+                            IssueEvent e => $"{nameof(e)} action: '{e.Action}'",
+                            PullRequestReviewEvent e => $"{nameof(e)} action: '{e.Action}'",
                             _ => "unknown event type"
                         };
                         await FireEvent(webhookObj);

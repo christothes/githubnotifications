@@ -1,13 +1,14 @@
-using NUnit.Framework;
-using Moq;
-using Microsoft.Extensions.Logging;
-using System.Collections.Generic;
-using GitHubNotifications.Models;
-using System.Threading.Tasks;
 using System;
+using System.Collections.Generic;
 using System.Linq;
-using GitHubNotifications.Server;
 using System.Text.Json;
+using System.Threading.Tasks;
+using GitHubNotifications.Models;
+using GitHubNotifications.Server;
+using GitHubNotifications.Shared;
+using Microsoft.Extensions.Logging;
+using Moq;
+using NUnit.Framework;
 using static GitHubNotifications.Shared.TestData;
 
 namespace GitHubNotifications.Tests
@@ -16,13 +17,17 @@ namespace GitHubNotifications.Tests
     {
         private EventDispatcher target;
         Mock<ILogger<EventDispatcher>> loggerMock;
+        bool prReviewCommentEventCalled = false;
+        bool prReviewEventCalled = false;
         bool prEventCalled = false;
-        bool reviewEventCalled = false;
+        bool issueCommentEventCalled = false;
         bool issueEventCalled = false;
         bool checkEventCalled = false;
-        Func<PullRequestReviewCommentEvent, Task> commentFunc;
+        Func<PullRequestReviewCommentEvent, Task> prReviewCommentFunc;
+        Func<PullRequestReviewEvent, Task> prReviewFunc;
         Func<PullRequestEvent, Task> prFunc;
-        Func<IssueCommentEvent, Task> issueFunc;
+        Func<IssueCommentEvent, Task> issueCommentFunc;
+        Func<IssueEvent, Task> issueFunc;
         Func<CheckSuiteEvent, Task> checkFunc;
 
         [SetUp]
@@ -30,11 +35,16 @@ namespace GitHubNotifications.Tests
         {
             loggerMock = new Mock<ILogger<EventDispatcher>>();
             target = new EventDispatcher(loggerMock.Object);
-            commentFunc = (e) =>
-           {
-               reviewEventCalled = true;
-               return Task.CompletedTask;
-           };
+            prReviewFunc = (e) =>
+            {
+                prReviewEventCalled = true;
+                return Task.CompletedTask;
+            };
+            prReviewCommentFunc = (e) =>
+            {
+                prReviewCommentEventCalled = true;
+                return Task.CompletedTask;
+            };
             prFunc = (e) =>
             {
                 prEventCalled = true;
@@ -43,6 +53,11 @@ namespace GitHubNotifications.Tests
             issueFunc = (e) =>
             {
                 issueEventCalled = true;
+                return Task.CompletedTask;
+            };
+            issueCommentFunc = (e) =>
+            {
+                issueCommentEventCalled = true;
                 return Task.CompletedTask;
             };
             checkFunc = (e) =>
@@ -55,17 +70,29 @@ namespace GitHubNotifications.Tests
         [Test]
         public async Task RegisterAddsFuncAndFireCallsIt()
         {
-            target.Register(commentFunc);
-            Assert.AreSame(commentFunc, target.reviewEventSubscribers.FirstOrDefault());
+            target.Register(prReviewFunc);
+            Assert.AreSame(prReviewFunc, target.pullRequestReviewEventSubscribers.FirstOrDefault());
+
+            await target.FireEvent(prReviewEvent);
+            Assert.IsTrue(prReviewEventCalled);
+
+            target.Register(prReviewCommentFunc);
+            Assert.AreSame(prReviewCommentFunc, target.pullRequestReviewCommentEventSubscribers.FirstOrDefault());
 
             await target.FireEvent(prCommentEvent);
-            Assert.IsTrue(reviewEventCalled);
+            Assert.IsTrue(prReviewCommentEventCalled);
 
             target.Register(prFunc);
-            Assert.AreSame(prFunc, target.prEventSubscribers.FirstOrDefault());
+            Assert.AreSame(prFunc, target.pullRequestEventSubscribers.FirstOrDefault());
 
             await target.FireEvent(prEvent);
             Assert.IsTrue(prEventCalled);
+
+            target.Register(issueCommentFunc);
+            Assert.AreSame(issueCommentFunc, target.issueCommentEventSubscribers.FirstOrDefault());
+
+            await target.FireEvent(issueCommentEvent);
+            Assert.IsTrue(issueCommentEventCalled);
 
             target.Register(issueFunc);
             Assert.AreSame(issueFunc, target.issueEventSubscribers.FirstOrDefault());
@@ -76,23 +103,22 @@ namespace GitHubNotifications.Tests
             target.Register(checkFunc);
             Assert.AreSame(checkFunc, target.checkEventSubscribers.FirstOrDefault());
 
-            await target.FireEvent(checkSuiteEvent);
+            await target.FireEvent(checkSuiteFailedEvent);
             Assert.IsTrue(checkEventCalled);
         }
 
         [TestCaseSource(nameof(Payloads))]
         public async Task ProcessEvent(Dictionary<string, object> elementMap)
         {
-            target.Register(commentFunc);
+            target.Register(prReviewCommentFunc);
             target.Register(prFunc);
-            target.Register(issueFunc);
+            target.Register(issueCommentFunc);
             target.Register(checkFunc);
+            target.Register(issueFunc);
+            target.Register(prReviewFunc);
 
-            await target.FireEvent(checkSuiteEvent);
-            Assert.IsTrue(checkEventCalled);
             var eventPayload = elementMap["content"];
-            string evtType = ((GitHubEvent)elementMap["headers"]).XGitHubEvent[0];
-
+            string evtType = ((GitHubEventEnvelope)elementMap["headers"]).XGitHubEvent[0];
             elementMap["content"] = EncodePayload(elementMap["content"]);
             var json = JsonSerializer.Serialize(elementMap);
 
@@ -100,14 +126,23 @@ namespace GitHubNotifications.Tests
 
             switch (eventPayload)
             {
-                case ICommentEvent ce:
-                    Assert.That(reviewEventCalled == true || issueEventCalled == true);
+                case PullRequestReviewCommentEvent:
+                    Assert.IsTrue(prReviewCommentEventCalled);
                     break;
-                case PullRequestEvent pre:
-                    Assert.IsTrue(prEventCalled);
+                case IssueCommentEvent:
+                    Assert.IsTrue(issueCommentEventCalled);
                     break;
-                case CheckSuiteEvent cse:
+                case IssueEvent:
+                    Assert.IsTrue(issueEventCalled);
+                    break;
+                case PullRequestEvent:
+                    Assert.IsTrue(prReviewEventCalled);
+                    break;
+                case CheckSuiteEvent:
                     Assert.IsTrue(checkEventCalled);
+                    break;
+                case PullRequestReviewEvent:
+                    Assert.IsTrue(prReviewEventCalled);
                     break;
             }
         }

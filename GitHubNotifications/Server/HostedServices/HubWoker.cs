@@ -20,7 +20,7 @@ namespace GitHubNotifications.Server
             _hubContext = hub;
         }
 
-        protected internal override async Task PrCommentEventHandler(PullRequestReviewCommentEvent evt)
+        protected internal override async Task PullRequestReviewCommentEventHandler(PullRequestReviewCommentEvent evt)
         {
             _logger.LogInformation($"{evt.Comment.CreatedAt.ToLocalTime()} PRComment Url: {evt.Comment.HtmlUrl} PR: {evt.PullRequest.HtmlUrl}");
 
@@ -41,7 +41,7 @@ namespace GitHubNotifications.Server
                 "NewComment", model);
         }
 
-        protected internal override async Task IssueEventHandler(IssueCommentEvent evt)
+        protected internal override async Task IssueCommentEventHandler(IssueCommentEvent evt)
         {
             _logger.LogInformation($"{evt.Comment.CreatedAt.ToLocalTime()} IssueComment Url: {evt.Comment.HtmlUrl} Issue: {evt.Issue.HtmlUrl}");
 
@@ -95,6 +95,16 @@ namespace GitHubNotifications.Server
         }
 
         protected internal override Task PullRequestEventHandler(PullRequestEvent evt)
+        {
+            return Task.CompletedTask;
+        }
+
+        protected internal override Task PullRequestReviewEventHandler(PullRequestReviewEvent evt)
+        {
+            return Task.CompletedTask;
+        }
+
+        protected internal override Task IssueEventHandler(IssueEvent evt)
         {
             return Task.CompletedTask;
         }

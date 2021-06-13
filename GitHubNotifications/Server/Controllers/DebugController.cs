@@ -39,10 +39,10 @@ namespace GitHubNotifications.Server
             switch (testEvent.EventType)
             {
                 case "comment":
-                    await _hubWorker.PrCommentEventHandler(TestData.prCommentEvent);
+                    await _hubWorker.PullRequestReviewCommentEventHandler(TestData.prCommentEvent);
                     break;
                 case "check":
-                    await _hubWorker.CheckSuiteEventHandler(TestData.checkSuiteEvent);
+                    await _hubWorker.CheckSuiteEventHandler(TestData.checkSuiteFailedEvent);
                     break;
             }
             return Ok();

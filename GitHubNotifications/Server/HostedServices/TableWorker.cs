@@ -11,41 +11,22 @@ namespace GitHubNotifications.Server
 {
     public class TableWorker : Worker, IHostedService
     {
-        public const string PR_PK = "pr";
         private readonly TableClient commentTable;
         private readonly TableClient prTable;
-        private readonly TableClient labelTable;
 
-        public TableWorker(
-            ILogger<TableWorker> logger,
-            EventDispatcher dispatcher,
-            TableServiceClient tableService) : base(dispatcher, logger)
+        public TableWorker(ILogger<TableWorker> logger, EventDispatcher dispatcher, TableServiceClient tableService)
+                : base(dispatcher, logger)
         {
             commentTable = tableService.GetTableClient("comments");
             prTable = tableService.GetTableClient("prs");
-            labelTable = tableService.GetTableClient("labels");
-
             commentTable.CreateIfNotExists();
             prTable.CreateIfNotExists();
-            labelTable.CreateIfNotExists();
         }
 
-        protected internal override async Task PrCommentEventHandler(PullRequestReviewCommentEvent evt)
+        protected internal override async Task PullRequestReviewCommentEventHandler(PullRequestReviewCommentEvent evt)
         {
-            await prTable.UpsertEntityAsync(
-                new PREntity
-                {
-                    PartitionKey = PR_PK,
-                    RowKey = evt.PullRequest.Head.Sha,
-                    Title = evt.PullRequest.Title,
-                    Url = evt.PullRequest.HtmlUrl,
-                    Author = evt.PullRequest.User.Login,
-                    Labels = string.Join(";", evt.PullRequest.Labels.Select(l => l.Name))
-                },
-                TableUpdateMode.Replace,
-                cancellationToken: _token);
-
-            await commentTable.UpsertEntityAsync(new PRComment(evt), TableUpdateMode.Replace, cancellationToken: _token);
+            await commentTable.UpsertEntityAsync(new PRComment(evt), TableUpdateMode.Replace);
+            await prTable.UpsertEntityAsync(new PREntity(evt), TableUpdateMode.Replace);
         }
 
         protected internal override async Task PullRequestEventHandler(PullRequestEvent evt)
@@ -53,87 +34,67 @@ namespace GitHubNotifications.Server
             var actions = new List<TableTransactionAction>();
             string[] selectProps = new[] { "PartitionKey,RowKey" };
 
-            switch (evt.Action)
+            // Always update the PR in case there have been any changes.
+            try
             {
-                case "closed" when evt.PullRequest.Merged:
-                    try
-                    {
-                        await prTable.DeleteEntityAsync(PR_PK, evt.PullRequest.Head.Sha, cancellationToken: _token);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex.ToString());
-                    }
-                    try
-                    {
+                await prTable.UpsertEntityAsync(new PREntity(evt), TableUpdateMode.Replace);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex.ToString());
+            }
+            try
+            {
+                switch (evt.Action)
+                {
+                    case "closed" when evt.PullRequest.Merged:
                         // Get all the comments to delete.
-                        await foreach (var comment in commentTable.QueryAsync<PRComment>(
-                            e => e.PartitionKey == evt.PullRequest.User.Login && e.PrNumber == evt.PullRequest.Number.ToString(),
-                            select: selectProps,
-                            cancellationToken: _token))
-                        {
-                            actions.Add(new TableTransactionAction(TableTransactionActionType.Delete, comment));
-                        }
-                        // Batch delete the comments related to the merged PR.
-                        int skip = 0;
-                        while (skip < actions.Count)
-                        {
-                            await commentTable.SubmitTransactionAsync(actions.Skip(skip).Take(100), _token);
-                            skip += 100;
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex.ToString());
-                    }
-                    break;
-                case "labeled":
-                case "unlabeled":
-                    string labels = string.Join(";", evt.PullRequest.Labels.Select(l => l.Name));
+                        _logger.LogInformation($"Deleting comments for PR {evt.PullRequest.HtmlUrl}");
+                        await Actions.AllCommentsForPR(
+                            (c, pr) => new TableTransactionAction(TableTransactionActionType.Delete, c),
+                            evt.PullRequest, commentTable);
+                        break;
+                    case "labeled":
+                    case "unlabeled":
+                        // update the comment lables for this PR.
+                        _logger.LogInformation($"Updating labels on comments for PR {evt.PullRequest.HtmlUrl}");
+                        string labels = string.Join(";", evt.PullRequest.Labels.Select(l => l.Name));
+                        await Actions.AllCommentsForPR(
+                            (c, pr) =>
+                            {
+                                c.Labels = labels;
+                                return new TableTransactionAction(TableTransactionActionType.UpdateMerge, c);
+                            }, evt.PullRequest, commentTable);
+                        break;
+                    case "review_requested":
+                        break;
 
-                    // update the comment lables for this PR.
-                    try
-                    {
-                        await foreach (var comment in commentTable.QueryAsync<PRComment>(
-                            e => e.PartitionKey == evt.PullRequest.User.Login && e.PrNumber == evt.PullRequest.Number.ToString(),
-                            select: selectProps,
-                            cancellationToken: _token))
-                        {
-                            comment.Labels = labels;
-                            actions.Add(new TableTransactionAction(TableTransactionActionType.UpsertMerge, comment));
-                        }
-                        await commentTable.SubmitTransactionAsync(actions, _token);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex.ToString());
-                    }
-                    break;
-                default:
-                    await prTable.UpsertEntityAsync(
-                        new PREntity
-                        {
-                            PartitionKey = PR_PK,
-                            RowKey = evt.PullRequest.Head.Sha,
-                            Title = evt.PullRequest.Title,
-                            Url = evt.PullRequest.HtmlUrl,
-                            Author = evt.PullRequest.User.Login,
-                            Labels = string.Join(";", evt.PullRequest.Labels.Select(l => l.Name))
-                        },
-                        TableUpdateMode.Replace,
-                        cancellationToken: _token);
-                    break;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex.ToString());
             }
         }
 
-        protected internal override async Task IssueEventHandler(IssueCommentEvent evt)
+        protected internal override async Task IssueCommentEventHandler(IssueCommentEvent evt)
         {
-            await commentTable.UpsertEntityAsync(new PRComment(evt), TableUpdateMode.Replace, cancellationToken: _token);
+            await commentTable.UpsertEntityAsync(new PRComment(evt), TableUpdateMode.Replace);
         }
 
         protected internal override Task CheckSuiteEventHandler(CheckSuiteEvent evt)
         {
-            throw new NotImplementedException();
+            return Task.CompletedTask;
+        }
+
+        protected internal override Task PullRequestReviewEventHandler(PullRequestReviewEvent evt)
+        {
+            return Task.CompletedTask;
+        }
+
+        protected internal override Task IssueEventHandler(IssueEvent evt)
+        {
+            return Task.CompletedTask;
         }
     }
 }

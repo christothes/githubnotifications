@@ -24,22 +24,20 @@ namespace GitHubNotifications.Tests
         Mock<TableClient> prsTableMock;
         Mock<TableClient> lablesTableMock;
         Mock<TableServiceClient> tableServiceMock;
-        Mock<ILogger<EventDispatcher>> loggerMock;
+        MockLogger<TableWorker> loggerMock;
         Mock<IHubContext<NotificationsHub>> hubMock;
-        List<PRComment> prCommentsQueryresponse = new List<PRComment>
-        {
-            new PRComment(), new PRComment(), new PRComment()
-        };
+        List<PRComment> prCommentsQueryresponse;
 
         [SetUp]
         public void Setup()
         {
+            prCommentsQueryresponse = GetComments(200);
             commentTableMock = new Mock<TableClient>();
             commentTableMock.Setup(m => m.QueryAsync<PRComment>(It.IsAny<Expression<Func<PRComment, bool>>>(), null, It.IsAny<IEnumerable<string>>(), default))
                 .Returns(new MockAsyncPageable<PRComment>(prCommentsQueryresponse))
                 .Verifiable();
             tableServiceMock = new Mock<TableServiceClient>();
-            loggerMock = new Mock<ILogger<EventDispatcher>>();
+            loggerMock = new MockLogger<TableWorker>(l => Assert.AreNotEqual(LogLevel.Error, l));
             prsTableMock = new Mock<TableClient>();
             lablesTableMock = new Mock<TableClient>();
 
@@ -49,7 +47,12 @@ namespace GitHubNotifications.Tests
             tableServiceMock.Setup(m => m.GetTableClient("prs")).Returns(prsTableMock.Object);
             tableServiceMock.Setup(m => m.GetTableClient("labels")).Returns(lablesTableMock.Object);
             dispatcher = new EventDispatcher(Mock.Of<ILogger<EventDispatcher>>());
-            target = new TableWorker(Mock.Of<ILogger<TableWorker>>(), dispatcher, tableServiceMock.Object);
+            target = new TableWorker(loggerMock, dispatcher, tableServiceMock.Object);
+        }
+
+        [TearDown]
+        public void TearDown()
+        {
         }
 
         [Test]
@@ -57,20 +60,20 @@ namespace GitHubNotifications.Tests
         {
             var source = new CancellationTokenSource();
             Func<PullRequestEvent, Task> prFunc = target.PullRequestEventHandler;
-            Func<PullRequestReviewCommentEvent, Task> commentFunc = target.PrCommentEventHandler;
-            Func<IssueCommentEvent, Task> issueFunc = target.IssueEventHandler;
+            Func<PullRequestReviewCommentEvent, Task> commentFunc = target.PullRequestReviewCommentEventHandler;
+            Func<IssueCommentEvent, Task> issueFunc = target.IssueCommentEventHandler;
             Func<CheckSuiteEvent, Task> checkFunc = target.CheckSuiteEventHandler;
 
             await target.StartAsync(source.Token);
 
-            Assert.AreEqual(prFunc, dispatcher.prEventSubscribers.FirstOrDefault());
-            Assert.AreEqual(commentFunc, dispatcher.reviewEventSubscribers.FirstOrDefault());
-            Assert.AreEqual(issueFunc, dispatcher.issueEventSubscribers.FirstOrDefault());
+            Assert.AreEqual(prFunc, dispatcher.pullRequestEventSubscribers.FirstOrDefault());
+            Assert.AreEqual(commentFunc, dispatcher.pullRequestReviewCommentEventSubscribers.FirstOrDefault());
+            Assert.AreEqual(issueFunc, dispatcher.issueCommentEventSubscribers.FirstOrDefault());
             Assert.AreEqual(checkFunc, dispatcher.checkEventSubscribers.FirstOrDefault());
         }
 
         [Test]
-        public async Task PullRequestEventHandler([Values(true, false)] bool merged)
+        public async Task TableWorker_PullRequestEventHandler([Values(true, false)] bool merged)
         {
             var pre = merged ? prMergedEvent : prEvent;
 
@@ -80,55 +83,54 @@ namespace GitHubNotifications.Tests
         }
 
         [Test]
-        public async Task PullRequestEventHandlerLabledOrUnLabeled([Values(true, false)] bool labeled)
+        public async Task TableWorker_PullRequestEventHandlerLabledOrUnLabeled([Values(true, false)] bool labeled)
         {
             var pre = labeled ? prEventLabeled : prEventUnLabeled;
 
             await target.PullRequestEventHandler(pre);
 
+            string labels = string.Join(";", pre.PullRequest.Labels.Select(l => l.Name));
+
             prsTableMock.Verify();
             commentTableMock.Verify(m => m.SubmitTransactionAsync(
-                It.Is<IEnumerable<TableTransactionAction>>(a => a.Count() == prCommentsQueryresponse.Count),
-                default), Times.Once);
+                It.Is<IEnumerable<TableTransactionAction>>(
+                    a => a.Count() == 100 &&
+                    a.All(i => i.ActionType == TableTransactionActionType.UpdateMerge && ((PRComment)i.Entity).Labels == labels)),
+                default), Times.Exactly(2)); ;
         }
 
         [Test]
-        public async Task IssueEventHandler()
+        public async Task TableWorker_IssueEventHandler()
         {
-            await target.IssueEventHandler(issueEvent);
+            await target.IssueCommentEventHandler(issueCommentEvent);
 
             commentTableMock.Verify(m => m.UpsertEntityAsync(It.IsAny<PRComment>(), TableUpdateMode.Replace, default));
         }
 
         [Test]
-        public async Task PrCommentEventHandler()
+        public async Task TableWorker_PrCommentEventHandler()
         {
-            await target.PrCommentEventHandler(prCommentEvent);
+            await target.PullRequestReviewCommentEventHandler(prCommentEvent);
 
             commentTableMock.Verify(m => m.UpsertEntityAsync(It.IsAny<PRComment>(), TableUpdateMode.Replace, default));
         }
 
         private void ValidateTable(bool merged, PullRequestEvent pre)
         {
+            prsTableMock.Verify(m => m.UpsertEntityAsync(
+                It.Is<PREntity>(e => e.PartitionKey == prEvent.Repository.Name), TableUpdateMode.Replace, default));
+
             if (merged)
             {
-                prsTableMock.Verify(m => m.DeleteEntityAsync(
-                    It.IsAny<string>(),
-                    pre.PullRequest.Head.Sha,
-                    default,
-                    default), Times.Once);
-                prsTableMock.Verify();
                 commentTableMock.Verify(m => m.SubmitTransactionAsync(
-                    It.Is<IEnumerable<TableTransactionAction>>(a => a.Count() == prCommentsQueryresponse.Count),
-                    default), Times.Once);
-            }
-            else
-            {
-                prsTableMock.Verify(m => m.UpsertEntityAsync(
-                    It.Is<PREntity>(pr => pr.RowKey == pre.PullRequest.Head.Sha),
-                    TableUpdateMode.Replace,
-                    default), Times.Once);
+                    It.Is<IEnumerable<TableTransactionAction>>(
+                        a => a.Count() == 100 &&
+                        a.All(i => i.ActionType == TableTransactionActionType.Delete)),
+                    default), Times.Exactly(2));
             }
         }
+
+        private List<PRComment> GetComments(int count)
+            => Enumerable.Range(0, count).Select(i => new PRComment()).ToList();
     }
 }

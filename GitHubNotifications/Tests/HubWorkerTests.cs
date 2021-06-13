@@ -28,40 +28,35 @@ namespace GitHubNotifications.Tests
         }
 
         [Test]
-        public async Task PrCommentEventHandler()
+        public async Task HubWorker_PrCommentEventHandler()
         {
-            await target.PrCommentEventHandler(prCommentEvent);
+            await target.PullRequestReviewCommentEventHandler(prCommentEvent);
 
             ValidateHub(prCommentEvent);
         }
 
         [Test]
-        public async Task IssueEventHandler()
+        public async Task HubWorker_IssueEventHandler()
         {
-            await target.IssueEventHandler(issueEvent);
+            await target.IssueCommentEventHandler(issueCommentEvent);
 
-            ValidateHub(issueEvent);
+            ValidateHub(issueCommentEvent);
         }
 
         [Test]
-        public async Task CheckEventHandlerNotFailedCheck()
+        public async Task HubWorker_CheckEventHandler([Values(true, false)] bool success)
         {
-            await target.CheckSuiteEventHandler(new CheckSuiteEvent { CheckSuite = new CheckSuite { Conclusion = "Success" } });
+            var evt = success switch
+            {
+                true => checkSuiteSuccessdEvent,
+                false => checkSuiteFailedEvent
+            };
 
+            await target.CheckSuiteEventHandler(evt);
             hubMock.Verify(m => m.Clients.All.SendCoreAsync(
                 "CheckStatus",
                 It.Is<object[]>(oo => oo.Length == 6),
-                default), Times.Never);
-        }
-        [Test]
-        public async Task CheckEventHandlerFailedCheck()
-        {
-            await target.CheckSuiteEventHandler(checkSuiteEvent);
-
-            hubMock.Verify(m => m.Clients.All.SendCoreAsync(
-                "CheckStatus",
-                It.Is<object[]>(oo => oo.Length == 6),
-                default));
+                default), success ? Times.Never : Times.Once);
         }
 
         private void ValidateHub(ICommentEvent commentEvent)
