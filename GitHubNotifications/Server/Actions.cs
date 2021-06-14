@@ -15,10 +15,13 @@ namespace GitHubNotifications.Server
         {
             var actions = new List<TableTransactionAction>();
             var number = pr.Number.ToString();
-            await foreach (var comment in GetComments(pr.User.Login, number, commentTable))
+            var filter = TableClient.CreateQueryFilter<PRComment>(e => e.PartitionKey == pr.User.Login && e.PrNumber == number);
+            logger.LogInformation($"Querying comments with filter {filter}");
+            await foreach (var comment in commentTable.QueryAsync<PRComment>(e => e.PartitionKey == pr.User.Login && e.PrNumber == number))
             {
                 actions.Add(action(comment, pr));
             }
+            logger.LogInformation($"GetComments generated {actions.Count} actions");
             await ExecuteActionsAsBatch(actions, commentTable, logger);
             return true;
         }
