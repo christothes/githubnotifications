@@ -89,6 +89,18 @@ namespace GitHubNotifications.Client
                 }
             });
 
+            hubConnection.On<string, string>("PrClosed", (repo, prNumber) =>
+            {
+                Console.WriteLine($"PR closed: {repo}/{prNumber}");
+                foreach (var comment in commentLookup.Values)
+                {
+                    if (comment.prNumber == prNumber)
+                    {
+                        commentLookup.Remove(comment.id);
+                    }
+                }
+            });
+
             hubConnection.On<ClientComment>("NewComment", async (comment) =>
             {
                 Console.WriteLine($"Received comment id: {comment.id}");

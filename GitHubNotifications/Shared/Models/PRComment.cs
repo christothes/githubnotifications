@@ -51,9 +51,7 @@ namespace GitHubNotifications.Models
             Updated = i.Comment.UpdatedAt;
             ParentId = i.Comment.InReplyToId.ToString();
             Author = i.Comment.User.Login;
-            PrNumber = i.Issue.PullRequest != null ?
-             i.Issue.PullRequest.Url.Substring(i.Issue.Url.LastIndexOf('/') + 1) :
-             i.Issue.Number.ToString();
+            PrNumber = i.Issue.Number.ToString();
             PrTitle = i.Issue.Title;
             Labels = string.Join(";", i.Issue.Labels.Select(l => l.Name));
         }

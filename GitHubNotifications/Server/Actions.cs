@@ -15,13 +15,11 @@ namespace GitHubNotifications.Server
         {
             var actions = new List<TableTransactionAction>();
             var number = pr.Number.ToString();
-            var filter = TableClient.CreateQueryFilter<PRComment>(e => e.PartitionKey == pr.User.Login && e.PrNumber == number);
-            logger.LogInformation($"Querying comments with filter {filter}");
             await foreach (var comment in commentTable.QueryAsync<PRComment>(e => e.PartitionKey == pr.User.Login && e.PrNumber == number))
             {
                 actions.Add(action(comment, pr));
             }
-            logger.LogInformation($"GetComments generated {actions.Count} actions");
+            logger.LogInformation($"GetComments generated {actions.Count} actions for PR {pr.HtmlUrl}");
             await ExecuteActionsAsBatch(actions, commentTable, logger);
             return true;
         }
@@ -31,9 +29,7 @@ namespace GitHubNotifications.Server
             int skip = 0;
             while (skip < actions.Count)
             {
-                logger.LogInformation($"Submitting transactions with skip: {skip}, Count: {actions.Skip(skip).Take(100).Count()}");
                 await commentTable.SubmitTransactionAsync(actions.Skip(skip).Take(100));
-                logger.LogInformation($"Submitted transactions with skip: {skip}, Count: {actions.Skip(skip).Take(100).Count()}");
                 skip += 100;
             }
         }

@@ -92,7 +92,7 @@ namespace GitHubNotifications.Server
             }
             var conclusion = evt.CheckSuite.Conclusion;
 
-            
+
 
             await _hubContext.Clients.All.SendAsync(
                 "CheckStatus",
@@ -104,9 +104,32 @@ namespace GitHubNotifications.Server
                 prDetails.Author);
         }
 
-        protected internal override Task PullRequestEventHandler(PullRequestEvent evt)
+        protected internal override async Task PullRequestEventHandler(PullRequestEvent evt)
         {
-            return Task.CompletedTask;
+            switch (evt.Action)
+            {
+                case "closed":
+                    await _hubContext.Clients.All.SendAsync(
+                        "PrClosed",
+                        evt.Repository.Name,
+                        evt.PullRequest.Number.ToString());
+                    break;
+                case "labeled":
+                case "unlabeled":
+                    await _hubContext.Clients.All.SendAsync(
+                        "LabelChanged",
+                        evt.Repository.Name,
+                        evt.PullRequest.Number.ToString(),
+                        string.Join(';', evt.PullRequest.Labels.Select(l => l.Name)));
+                    break;
+                case "review_requested":
+                    await _hubContext.Clients.All.SendAsync(
+                        "PrReviewRequested",
+                        evt.Repository.Name,
+                        evt.PullRequest.Number.ToString(),
+                        string.Join(';', evt.PullRequest.RequestedReviewers.Select(l => l.Login)));
+                    break;
+            }
         }
 
         protected internal override Task PullRequestReviewEventHandler(PullRequestReviewEvent evt)
