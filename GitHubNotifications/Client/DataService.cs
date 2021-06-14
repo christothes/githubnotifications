@@ -99,6 +99,7 @@ namespace GitHubNotifications.Client
                         commentLookup.Remove(comment.id);
                     }
                 }
+                ReportProgress();
             });
 
             hubConnection.On<ClientComment>("NewComment", async (comment) =>
